@@ -1,0 +1,136 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyTorch
+*.pth
+*.pt
+*.ckpt
+
+# Safetensors (large model files)
+*.safetensors
+
+# Large test data and datasets
+dot2/lerobot/tests/data/
+dot2/lerobot/tests/data/lerobot/
+dot2/lerobot/tests/data/save_*/
+dot2/lerobot/tests/data/*/
+
+# Cache directories
+.cache/
+dot2/lerobot/.cache/
+dot2/lerobot/outputs/
+dot2/lerobot/outputs/*/
+
+# Large media files
+dot2/lerobot/media/*.mp4
+dot2/lerobot/media/*.avi
+dot2/lerobot/media/*.mov
+dot2/lerobot/media/*.webm
+
+# Video files in test data
+**/videos/
+**/*.mp4
+**/*.avi
+**/*.mov
+
+# Large binary files
+*.bin
+*.h5
+*.hdf5
+*.arrow
+*.parquet
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Poetry
+poetry.lock
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Large model checkpoints
+**/checkpoints/
+**/models/
+**/weights/
+**/*.pkl
+**/*.pickle
+
+# Dataset files
+**/datasets/
+**/data/
+**/raw_data/
+
+# Output and results
+**/results/
+**/outputs/
+**/logs/
+**/runs/
+
+# Docker
+.dockerignore
+
+# Git
+.git/
