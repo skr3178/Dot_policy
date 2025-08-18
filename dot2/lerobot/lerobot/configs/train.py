@@ -1,3 +1,5 @@
+## This training config defines the training pipeline configuration
+
 import datetime as dt
 import logging
 import os

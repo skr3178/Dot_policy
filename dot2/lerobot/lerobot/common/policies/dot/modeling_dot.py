@@ -238,6 +238,7 @@ class DOTPolicy(PreTrainedPolicy):
         return self.model.parameters()
 
     def _update_observation_buffers(self, buffer_name: str, observation: Tensor) -> Tensor:
+        # Returns a tensor of input buffer-name
         # We keep the last lookback_obs_steps + 1 of each input in the queue
         # Every step they are updated and the oldest one is removed
         if buffer_name not in self._input_buffers:
@@ -254,6 +255,7 @@ class DOTPolicy(PreTrainedPolicy):
             [
                 self._input_buffers[buffer_name][:, :1],
                 self._input_buffers[buffer_name][:, -(self.config.n_obs_steps - 1) :],
+                # what is the dimension of the input_buffers ?
             ],
             dim=1,
         )
@@ -276,10 +278,10 @@ class DOTPolicy(PreTrainedPolicy):
         if "observation.images" in batch:
             batch["observation.images"] = batch["observation.images"].flatten(1, 2)
             # bs, n_obs * n_cam, c, h, w
-
         return batch
 
     def _chunk_actions(self, actions: Tensor) -> Tensor:
+        # this is just chunking the actions based on the average and weightage, not actual section of actions.
         # Store the previous action predictions in a buffer
         # Compute the weighted average of the inference horizon action predictions
         if self._old_predictions is not None:
@@ -299,6 +301,8 @@ class DOTPolicy(PreTrainedPolicy):
         batch = self._prepare_batch_for_inference(batch)
 
         # Only run model prediction every predict_every_n steps
+        # take the batch of information, pass through model to get the predicted actions
+        # unormalize the actions to tranform the embedding action to the domain/space of the output actions real.
         if self.step % self.predict_every_n == 0:
             actions_pred = self.model(batch)[:, -self.config.inference_horizon :]
             self.last_action = self.unnormalize_outputs({"action": actions_pred})["action"]
@@ -319,6 +323,9 @@ class DOTPolicy(PreTrainedPolicy):
         return action
 
     def forward(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
+        # Filter the states, actions (last few) from batch dataset and normalize them, save them in buffer in specific order
+        # crop images based on certain observation, calculations
+        # add noise to state
         lookback_ind = torch.randint(0, 2 * self.config.lookback_aug + 1, (1,)).item()
         for k in list(self.model.obs_mapping.values()) + list(self.image_names) + ["action", "action_is_pad"]:
             if k != "observation.images":
@@ -359,6 +366,7 @@ class DOTPolicy(PreTrainedPolicy):
         actions_hat = self.model(batch)
 
         loss = nn.functional.l1_loss(batch["action"], actions_hat, reduction="none")
+        # why is this padding needed? Perhaps to allow for the loss_weight computation
         rev_padding = (~batch["action_is_pad"]).unsqueeze(-1)
 
         # Apply padding, weights and decay to the loss

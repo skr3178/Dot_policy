@@ -90,6 +90,7 @@ These are great resources and I recommend to read papers and go through reposito
 
 ### PushT
 PushT is a simple environment but it requires dealing with multimodality (at least short term one) to achieve good results.
+
 [![PushT Demo](media/pusht.gif)](https://youtube.com/watch?v=NlUh5KH1-uU)
 
 ### ALOHA insertion
@@ -105,7 +106,7 @@ I recently decided to learn more about imitation learning and behavior cloning i
 
 In particular I noticed and wanted to validate the following ideas (my raw thoughts after reading the papers):
 
-- In robotics we deal with very low dimensional data compared to images or text (except for the image inputs of course). In the PushT Dataset, the state or action of the robot is just 2 numbers - x,y coordinates. For a robot arm, it is generally the number of joints (e.g. 6 for SO-ARM100). Even a bimanual mobile robot (e.g. ALOHA) will have 10-20 numbers as a state/action. This is way lower than in text - where each token is represented by 512+ dimensional embeddings and the number of tokens is generally much higher than the robot prediction horizon. It's also lower than images where each pixel is 3 numbers, so even a 640x480 image is ~1M numbers. This means that relatively small and simple models should be enough for some robotics tasks.
+- In robotics we deal with very low dimensional data compared to images or text (except for the image inputs of course). In the PushT Dataset, the state or action of the robot is just 2 numbers - x,y coordinates. For a robot arm, it is generally the number of joints (e.g. 6 for SO-ARM100). Even a bimanual mobile robot (e.g. ALOHA) will have 10-20 numbers as a state/action. This is way lower than in text - where each token is represented by 512+ dimensional embeddings and the number of tokens is generally much higher than the robot prediction horizon. It's also lower than images where each pixel is 3 numbers, so even a 640x480 image is ~1M numbers. This means that relatively small and simple models should be enough for some robotics tasks. [921600]
 
 - It also means that common sets of hyperparameters and ways how models are used in the text/image field may not be optimal for robotics tasks and we can adjust them. For example, transformers are SOTA in most sequential prediction problems now, and it is reasonable to use them to predict sequences of actions. But their usage can differ from other tasks. In text, both inputs and outputs are text tokens - each token has meaning and can't be skipped, requiring token-by-token prediction. In robotics problems, inputs are state variables and past actions, while prediction is a sequence of actions.
   - Inputs come from different modalities and should be treated accordingly.
@@ -127,6 +128,7 @@ TLDR: I project each input to the same dimension using either a linear layer or 
 Overall it is most similar to the ACT model but stripped of a lot of components: no VAE, no encoder, no spatial feature extraction for images, simpler positional encoding, and mostly default implementation of the transformer and other components + a few extra features and tricks described below.
 
 The schema of the model architecture:
+![DoT.jpg](../DoT.jpg)
 
 ![DOT Model Architecture](media/model.png)
 
@@ -147,6 +149,18 @@ Below is a more detailed description of important components and decisions.
 
 - I don't use any visual backbone modifications like spatial softmax (Diffusion, VQ-BET) or transformer encoder (ACT) as they are not necessary and didn't show improvements in my tests. My intuition here is that things like spatial softmax have very low resolution and don't really help to capture useful concepts in the images. For example, you may expect one of the channels of the spatial softmax to capture the position of the block in the image, but given the final 2D layer resolution it will be very imprecise. At the same time, the output of the FC layer of the visual backbone can directly predict that the block is N pixels from the manipulator in some particular direction - this is much more precise and useful information that can be used by the decoder to predict the action.
 
+Example usage of spatial softmax from the Diffusion paper:
+
+Transpose: [N, H, W, C] → [N, C, H, W]
+
+Reshape: [N, C, H, W] → [N*C, H*W]
+
+Apply softmax: Over spatial dimensions H*W
+
+Reshape back: [N*C, H*W] → [N, C, H, W]
+
+Transpose back: [N, C, H, W] → [N, H, W, C]
+
 - I use the same visual backbone for all the images. All images are rescaled to the same resolution, concatenated and projections are computed in one go. It is fast but could be suboptimal in performance. I haven't done quantitative tests in environments with multiple cameras. However, it worked well in my tests with the SO-ARM100 robot where I used 2 cameras with different resolutions, angles and color quality. The rationale is simple: even though cameras can have different angles, they are looking at the same objects and there should be cross-learning between them, at least in the first layers of the visual backbone. In future tests, I plan to experiment with separate FC layers or final layers for each camera.
 
 
@@ -160,10 +174,16 @@ Below are the main parameters of the transformer decoder that I used in my exper
   dim_feedforward: 512
   n_decoder_layers: 8
 ```
-
 - I use lower dim_model and dim_feedforward compared to e.g. the default params of the ACT model. As I mentioned above, the data is low dimensional and we don't need to capture very complex dependencies. 128 / 8 = 16 dimensions per head should be enough to capture the information. Too big dim_model also doesn't seem necessary - I didn't see any boost in performance but it slows down and increases the complexity of the model. I use dim_feedforward = 4 * dim_model.
 
 - I don't use an encoder in the transformer, mostly for simplicity - I just send the projections of the inputs as memory to the decoder. Though this decision may not be optimal because it won't scale well for longer prediction horizons. An ACT-like encoder-decoder with a very small decoder or different attention logic could be more efficient in this case. Nevertheless, I kept it simple and it worked well for these basic problems. I will test more complex architectures in the future.
+
+
+## TO-DO
+- test with different no. of decoder layers
+- Decoder + Encoder architecture  (similar to ACT)
+- using last 2 obs (default)- change to 0 and last 3 obs 
+
 
 ### Timestamps used for features and actions
 

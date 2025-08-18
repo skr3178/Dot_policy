@@ -7,8 +7,8 @@ It's wrapped in a ModuleDict container with two keys:
 "images": Contains a ResNet model (same architecture as the second model)
 "state": Contains a separate Linear layer (in_features=2, out_features=128)
 This suggests it's designed to process two different types of inputs (images and some state information) and combine them
-The ResNet part processes images and outputs 128-dimensional features (through its fc layer)
-The state part processes some 2-dimensional input into 128-dimensional features
+- The ResNet part processes images and outputs 128-dimensional features (through its fc layer)
+- The state part processes some 2-dimensional input into 128-dimensional features
 
 2. (Plain ResNet):
 It's a standalone ResNet model without any ModuleDict wrapper
@@ -17,11 +17,56 @@ The architecture is otherwise identical to the ResNet inside the ModuleDict
 Same output dimension (128) through its fc layer
 
 
-Model 1 (ModuleDict) is more complex, designed for multi-input processing (images + state).
-Model 2 (Plain ResNet) is a standard image-only model with the same ResNet backbone.
+- Model 1 (ModuleDict) is more complex, designed for multi-input processing (images + state).
+- Model 2 (Plain ResNet) is a standard image-only model with the same ResNet backbone.
 
 Both share identical ResNet architecture, LoRA layers, and frozen batch norm.
 
+D.o.T--> Decorder only Transformer 
+
+Why used?
+
+![decoder_2.png](decoder_2.png)
+
+![decoder_1.png](decoder_1.png)
+
+![IMG_3181.jpeg](IMG_3181.jpeg)
+
+![img.png](img.png)
+
+3 Cameras are used here. Multiple camera provide richer information on the task scene, allow even if one view is blocked
+
+1. Wrist camera:
+2. Front camera:
+3. Top down camera (for evaluation only)
+## As per the paper Diffusion Policy: Visuomotor Policy Learning via Action Diffusion:
+
+Top-down camera – Marked as “evaluation only” in Fig. V. This camera is not used as an observation input to the policy. Instead, it’s used offline for:
+Measuring success metrics — e.g., computing the IoU between the final T-block position and the goal region.
+Qualitative evaluation and video recording — producing the visualizations shown in the paper and supplemental videos.
+
+
+The visual encoder processes each camera view separately and concatenates their embeddings before feeding them into the diffusion policy.
+The dataset generated was through human operator manually.
+The Push-T datasets were created from human demonstrations on a tabletop pushing task in two settings:
+- Real-world dataset – Collected by having a human teleoperate a robot to push a puck toward a goal using an overhead camera and visual feedback.
+- Simulation dataset – Generated in a simulated environment that closely matches the real-world setup, again with human teleoperation to produce expert demonstrations.
+
+Few basics recap: 
+- Base model is the RESNET10 model. 
+- Replace
+
+There are 2 train.py files. 
+1. dot2/lerobot/lerobot/configs/train.py (Configuration File) 
+Defines the training pipeline config structure
+Handles config 
+
+2. dot2/lerobot/lerobot/scripts/train.py (Training Script)
+ Actual training execution script that implements the training loop:
+
+
+Dataset used: lerobot/pusht
+#### Ilia Readme.md
 
 ## Installation
 
