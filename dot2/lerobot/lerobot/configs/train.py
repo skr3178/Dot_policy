@@ -16,6 +16,7 @@ from lerobot.common.envs.configs import PushtEnv
 from lerobot.common.optim import OptimizerConfig
 from lerobot.common.optim.schedulers import LRSchedulerConfig
 from lerobot.common.policies.dot.configuration_dot import DOTConfig
+# from lerobot.common.policies.dot2.configuration_dot2 import DOT2Config
 from lerobot.common.utils.hub import HubMixin
 from lerobot.common.utils.utils import auto_select_torch_device, is_amp_available
 from lerobot.configs import parser
@@ -164,7 +165,7 @@ class TrainPipelineConfig(HubMixin):
 
         if not self.resume and isinstance(self.output_dir, Path) and self.output_dir.is_dir():
             raise FileExistsError(
-                f"Output directory {self.output_dir} alreay exists and resume is {self.resume}. "
+                f"Output directory {self.output_dir} already exists and resume is {self.resume}. "
                 f"Please change your output directory so that {self.output_dir} is not overwritten."
             )
         elif not self.output_dir:

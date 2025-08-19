@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+<!-- saved from url=(0072)https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/ -->
+<html lang="en" data-color-scheme="light"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!--     <meta property="og:image" content="https://www.dailydoseofds.com/content/images/2024/11/landing-page-15.svg" />
+    <meta property="og:title" content="Daily Dose of Data Science" /> -->
+
+    <!-- <meta property="twitter:image" content="https://www.dailydoseofds.com/content/images/2024/11/landing-page-15.svg" /> -->
+
+    <title>Implementing LLaMA 4 from Scratch</title>
+    <title></title>
+
+    
+
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="theme-color" content="#54b6f2">
+
+
+    <link rel="preload" href="./Implementing LLaMA 4 from Scratch_files/app.min.js" as="script">
+    <link rel="preload" href="./Implementing LLaMA 4 from Scratch_files/app.min.css" as="style">
+
+        <link rel="preconnect" href="https://fonts.googleapis.com/">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+
+
+
+
+
+
+
+
+    <link rel="stylesheet" href="./Implementing LLaMA 4 from Scratch_files/css2" as="style" onload="this.onload=null;this.rel=&#39;stylesheet&#39;" crossorigin="">
+    <style>body { --font-body: 'Noto Serif', serif; --font-headings: 'Noto Serif', serif; }</style>
+
+
+
+
+
+    <script type="text/javascript" async="" src="./Implementing LLaMA 4 from Scratch_files/reb2b.js.gz"></script><script async="" defer="" src="./Implementing LLaMA 4 from Scratch_files/app.min.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="./Implementing LLaMA 4 from Scratch_files/app.min.css">
+
+    <style>
+  :root {
+    --global-max-width: 1080px; /* site max width */
+    --global-content-width: 640px; /* post-content-width */
+    --global-wide-width: 960px; /* site max width */
+    --global-radius: 12px; /* default radius */
+    --global-radius-rounded: 30px;
+    --global-gallery-gap: 1em; /* Image gallery distance between images */
+    --global-hyphens: none; /* none/auto */
+    --global-header-height: 72px;
+    --global-theme-notifications: visible; /* visible/hidden */
+    --global-progress-bar: visible; /* visible/hidden */
+    --global-content-preview-fading: 0%; /* 50%-100% for fading effect */
+    --global-scroll-behavior: smooth;
+  }
+</style>
+
+<script>
+  let preferredTheme = localStorage.getItem('PREFERRED_COLOR_SCHEME') || `light`;
+  document.documentElement.setAttribute('data-color-scheme', preferredTheme);
+  
+  // Global values needed
+  const themeGlobal = {
+    currentPage: parseInt(''),
+    nextPage: parseInt(''),
+    nextPageLink: '',
+    maxPages: parseInt(''), 
+    lastPage: `` === `` ? true : false,
+    postsPerPage: parseInt('8'),
+    scrollPos: 0,
+    imageLightbox: false
+  }
+
+  // Calculate contrast & HSL value;
+  function getBrandColorInfo(hexcolor) {
+    // get contrast
+    if (hexcolor.slice(0, 1) === '#') { hexcolor = hexcolor.slice(1); }
+    if (hexcolor.length === 3) { hexcolor = hexcolor.split('').map(function (hex) { return hex + hex;}).join(''); }
+    let r = parseInt(hexcolor.substr(0,2),16), g = parseInt(hexcolor.substr(2,2),16), b = parseInt(hexcolor.substr(4,2),16);
+    let yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    const colorContrast = (yiq >= 128) ? '#000' : '#fff';
+
+    //get HSL
+    r /= 255, g /= 255, b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min)  /  2;  
+    if ( max == min ) { h = s = 0; } else {
+      let d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch(max){
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    const colorHSL = [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+
+    // return
+    return { colorContrast, colorHSL }
+  };
+
+  const brandColor = getBrandColorInfo("#54b6f2");
+  let style = document.createElement('style');
+  style.innerHTML = `:root { 
+    --color-brand-contrast: ${brandColor.colorContrast}; 
+    --color-brand-h: ${brandColor.colorHSL[0]};
+    --color-brand-s: ${brandColor.colorHSL[1]}%;
+    --color-brand-l: ${brandColor.colorHSL[2]}%;
+    --color-brand-hsl: ${brandColor.colorHSL[0]} ${brandColor.colorHSL[1]}% ${brandColor.colorHSL[2]}%;
+  }`
+  document.getElementsByTagName('head')[0].appendChild(style);
+</script><style class="fslightbox-styles">.fslightbox-absoluted{position:absolute;top:0;left:0}.fslightbox-fade-in{animation:fslightbox-fade-in .3s cubic-bezier(0,0,.7,1)}.fslightbox-fade-out{animation:fslightbox-fade-out .3s ease}.fslightbox-fade-in-strong{animation:fslightbox-fade-in-strong .3s cubic-bezier(0,0,.7,1)}.fslightbox-fade-out-strong{animation:fslightbox-fade-out-strong .3s ease}@keyframes fslightbox-fade-in{from{opacity:.65}to{opacity:1}}@keyframes fslightbox-fade-out{from{opacity:.35}to{opacity:0}}@keyframes fslightbox-fade-in-strong{from{opacity:.3}to{opacity:1}}@keyframes fslightbox-fade-out-strong{from{opacity:1}to{opacity:0}}.fslightbox-cursor-grabbing{cursor:grabbing}.fslightbox-full-dimension{width:100%;height:100%}.fslightbox-open{overflow:hidden;height:100%}.fslightbox-flex-centered{display:flex;justify-content:center;align-items:center}.fslightbox-opacity-0{opacity:0!important}.fslightbox-opacity-1{opacity:1!important}.fslightbox-scrollbarfix{padding-right:17px}.fslightbox-transform-transition{transition:transform .3s}.fslightbox-container{font-family:Arial,sans-serif;position:fixed;top:0;left:0;background:linear-gradient(rgba(30,30,30,.9),#000 1810%);touch-action:pinch-zoom;z-index:1000000000;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}.fslightbox-container *{box-sizing:border-box}.fslightbox-svg-path{transition:fill .15s ease;fill:#ddd}.fslightbox-nav{height:45px;width:100%;position:absolute;top:0;left:0}.fslightbox-slide-number-container{display:flex;justify-content:center;align-items:center;position:relative;height:100%;font-size:15px;color:#d7d7d7;z-index:0;max-width:55px;text-align:left}.fslightbox-slide-number-container .fslightbox-flex-centered{height:100%}.fslightbox-slash{display:block;margin:0 5px;width:1px;height:12px;transform:rotate(15deg);background:#fff}.fslightbox-toolbar{position:absolute;z-index:3;right:0;top:0;height:100%;display:flex;background:rgba(35,35,35,.65)}.fslightbox-toolbar-button{height:100%;width:45px;cursor:pointer}.fslightbox-toolbar-button:hover .fslightbox-svg-path{fill:#fff}.fslightbox-slide-btn-container{display:flex;align-items:center;padding:12px 12px 12px 6px;position:absolute;top:50%;cursor:pointer;z-index:3;transform:translateY(-50%)}@media (min-width:476px){.fslightbox-slide-btn-container{padding:22px 22px 22px 6px}}@media (min-width:768px){.fslightbox-slide-btn-container{padding:30px 30px 30px 6px}}.fslightbox-slide-btn-container:hover .fslightbox-svg-path{fill:#f1f1f1}.fslightbox-slide-btn{padding:9px;font-size:26px;background:rgba(35,35,35,.65)}@media (min-width:768px){.fslightbox-slide-btn{padding:10px}}@media (min-width:1600px){.fslightbox-slide-btn{padding:11px}}.fslightbox-slide-btn-container-previous{left:0}@media (max-width:475.99px){.fslightbox-slide-btn-container-previous{padding-left:3px}}.fslightbox-slide-btn-container-next{right:0;padding-left:12px;padding-right:3px}@media (min-width:476px){.fslightbox-slide-btn-container-next{padding-left:22px}}@media (min-width:768px){.fslightbox-slide-btn-container-next{padding-left:30px}}@media (min-width:476px){.fslightbox-slide-btn-container-next{padding-right:6px}}.fslightbox-down-event-detector{position:absolute;z-index:1}.fslightbox-slide-swiping-hoverer{z-index:4}.fslightbox-invalid-file-wrapper{font-size:22px;color:#eaebeb;margin:auto}.fslightbox-video{object-fit:cover}.fslightbox-youtube-iframe{border:0}.fslightboxl{display:block;margin:auto;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:67px;height:67px}.fslightboxl div{box-sizing:border-box;display:block;position:absolute;width:54px;height:54px;margin:6px;border:5px solid;border-color:#999 transparent transparent transparent;border-radius:50%;animation:fslightboxl 1.2s cubic-bezier(.5,0,.5,1) infinite}.fslightboxl div:nth-child(1){animation-delay:-.45s}.fslightboxl div:nth-child(2){animation-delay:-.3s}.fslightboxl div:nth-child(3){animation-delay:-.15s}@keyframes fslightboxl{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}.fslightbox-source{position:relative;z-index:2;opacity:0}</style><link type="text/css" rel="stylesheet" id="dark-mode-custom-link"><link type="text/css" rel="stylesheet" id="dark-mode-general-link"><style lang="en" type="text/css" id="dark-mode-custom-style"></style><style lang="en" type="text/css" id="dark-mode-native-style"></style><style lang="en" type="text/css" id="dark-mode-native-sheet"></style><style>:root { 
+    --color-brand-contrast: #000; 
+    --color-brand-h: 203;
+    --color-brand-s: 86%;
+    --color-brand-l: 64%;
+    --color-brand-hsl: 203 86% 64%;
+  }</style>
+
+    
+    
+<link rel="stylesheet" href="./Implementing LLaMA 4 from Scratch_files/prism-tomorrow.min.css" integrity="sha512-vswe+cgvic/XBoF1OcM/TeJ2FW0OofqAVdCZiEYkd6dwGXthvkSFWOoGGJgS2CW70VK5dQM5Oh+7ne47s74VTg==" crossorigin="anonymous" referrerpolicy="no-referrer">
+
+<style>
+    :not(pre)>code[class*=language-],pre[class*=language-] {
+    background: #011627
+    }
+  
+    @media screen and (max-width: 600px) {
+  .katex {
+    font-size: 14px; /* Adjust the font size as needed */
+    overflow-x: auto; /* Add horizontal scrolling for long equations */
+    max-width: 100%; /* Set a maximum width for the equations */
+  }
+}
+    
+</style>
+
+
+
+<link rel="stylesheet" href="./Implementing LLaMA 4 from Scratch_files/all.min.css">
+
+
+<script type="text/javascript" async="" src="./Implementing LLaMA 4 from Scratch_files/MathJax.js">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [["$", "$"], ["\\(", "\\)"]],
+        processEscapes: true
+    }
+});
+</script>
+
+<link rel="stylesheet" href="./Implementing LLaMA 4 from Scratch_files/katex.css" crossorigin="anonymous">
+<script defer="" src="./Implementing LLaMA 4 from Scratch_files/katex.js" crossorigin="anonymous"></script>
+<script defer="" src="./Implementing LLaMA 4 from Scratch_files/auto-render.min.js" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+
+
+
+<script src="./Implementing LLaMA 4 from Scratch_files/prism-core.min.js" integrity="sha512-9khQRAUBYEJDCDVP2yw3LRUQvjJ0Pjx0EShmaQjcHa6AXiOv6qHQu9lCAIR8O+/D8FtaCoJ2c0Tf9Xo7hYH01Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="./Implementing LLaMA 4 from Scratch_files/prism-autoloader.min.js" integrity="sha512-fTl/qcO1VgvKtOMApX2PdZzkziyr2stM65GYPLGuYMnuMm1z2JLJG6XVU7C/mR+E7xBUqCivykuhlzfqxXBXbg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="./Implementing LLaMA 4 from Scratch_files/prism-toolbar.min.js" integrity="sha512-st608h+ZqzliahyzEpETxzU0f7z7a9acN6AFvYmHvpFhmcFuKT8a22TT5TpKpjDa3pt3Wv7Z3SdQBCBdDPhyWA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="./Implementing LLaMA 4 from Scratch_files/prism-copy-to-clipboard.min.js" integrity="sha512-/kVH1uXuObC0iYgxxCKY41JdWOkKOxorFVmip+YVifKsJ4Au/87EisD1wty7vxN2kAhnWh6Yc8o/dSAXj6Oz7A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+
+<script>
+    
+  document.addEventListener("DOMContentLoaded", function() {
+    // Find all the locations
+    const toolbarItems = document.querySelectorAll('.toolbar-item');
+    
+    // Iterate over each location
+    toolbarItems.forEach(toolbarItem => {
+      const copyButton = toolbarItem.querySelector('.copy-to-clipboard-button');
+
+      // Create the <i> element
+      const icon = document.createElement('i');
+      icon.className = 'far fa-copy'; // Assuming the correct FontAwesome icon class is 'far fa-copy'
+        
+       icon.style.marginRight = '5px'; // Adjust the margin value as needed
+
+      // Insert the <i> element before the existing content of the button
+      copyButton.insertBefore(icon, copyButton.firstChild);
+    });
+  });  
+
+</script>
+     
+
+    <meta name="description" content="A from-scratch implementation of Llama 4 LLM, a mixture-of-experts model, using PyTorch code.">
+    <link rel="icon" href="https://www.dailydoseofds.com/content/images/size/w256h256/format/png/2023/06/logo-subsatck2-1.svg" type="image/png">
+    <link rel="canonical" href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    
+    <meta property="og:site_name" content="Daily Dose of Data Science">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Implementing LLaMA 4 from Scratch">
+    <meta property="og:description" content="A from-scratch implementation of Llama 4 LLM, a mixture-of-experts model, using PyTorch code.">
+    <meta property="og:url" content="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/">
+    <meta property="og:image" content="https://www.dailydoseofds.com/content/images/size/w1200/2025/05/Llama_4_scratch.png">
+    <meta property="article:published_time" content="2025-05-18T08:45:00.000Z">
+    <meta property="article:modified_time" content="2025-05-31T18:29:35.000Z">
+    <meta property="article:tag" content="LLMs">
+    
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Implementing LLaMA 4 from Scratch">
+    <meta name="twitter:description" content="A from-scratch implementation of Llama 4 LLM, a mixture-of-experts model, using PyTorch code.">
+    <meta name="twitter:url" content="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/">
+    <meta name="twitter:image" content="https://www.dailydoseofds.com/content/images/size/w1200/2025/05/Llama_4_scratch.png">
+    <meta name="twitter:label1" content="Written by">
+    <meta name="twitter:data1" content="Avi Chawla">
+    <meta name="twitter:label2" content="Filed under">
+    <meta name="twitter:data2" content="LLMs">
+    <meta name="twitter:site" content="@_avichawla">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="592">
+    
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "publisher": {
+        "@type": "Organization",
+        "name": "Daily Dose of Data Science",
+        "url": "https://www.dailydoseofds.com/",
+        "logo": {
+            "@type": "ImageObject",
+            "url": "https://www.dailydoseofds.com/content/images/2023/06/logo-subsatck2.svg"
+        }
+    },
+    "author": {
+        "@type": "Person",
+        "name": "Avi Chawla",
+        "image": {
+            "@type": "ImageObject",
+            "url": "https://www.dailydoseofds.com/content/images/2024/12/avi-google.jpg",
+            "width": 287,
+            "height": 303
+        },
+        "url": "https://www.dailydoseofds.com/author/avi/",
+        "sameAs": []
+    },
+    "contributor": [
+        {
+            "@type": "Person",
+            "name": "Akshay Pachaar",
+            "image": {
+                "@type": "ImageObject",
+                "url": "https://www.dailydoseofds.com/content/images/2024/11/38653995.png"
+            },
+            "url": "https://www.dailydoseofds.com/author/akshay/",
+            "sameAs": []
+        }
+    ],
+    "headline": "Implementing LLaMA 4 from Scratch",
+    "url": "https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/",
+    "datePublished": "2025-05-18T08:45:00.000Z",
+    "dateModified": "2025-05-31T18:29:35.000Z",
+    "image": {
+        "@type": "ImageObject",
+        "url": "https://www.dailydoseofds.com/content/images/size/w1200/2025/05/Llama_4_scratch.png",
+        "width": 1200,
+        "height": 592
+    },
+    "keywords": "LLMs",
+    "description": "A from-scratch implementation of Llama 4 LLM, a mixture-of-experts model, using PyTorch code.",
+    "mainEntityOfPage": "https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/"
+}
+    </script>
+
+    <meta name="generator" content="Ghost 6.0">
+    <link rel="alternate" type="application/rss+xml" title="Daily Dose of Data Science" href="https://www.dailydoseofds.com/rss/">
+    <script defer="" src="./Implementing LLaMA 4 from Scratch_files/portal.min.js" data-i18n="true" data-ghost="https://www.dailydoseofds.com/" data-key="933dba8c65eaaa9a2f6c0be670" data-api="https://daily-dose-of-data-science.ghost.io/ghost/api/content/" data-locale="en" crossorigin="anonymous"></script><style id="gh-members-styles">.gh-post-upgrade-cta-content,
+.gh-post-upgrade-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    text-align: center;
+    width: 100%;
+    color: #ffffff;
+    font-size: 16px;
+}
+
+.gh-post-upgrade-cta-content {
+    border-radius: 8px;
+    padding: 40px 4vw;
+}
+
+.gh-post-upgrade-cta h2 {
+    color: #ffffff;
+    font-size: 28px;
+    letter-spacing: -0.2px;
+    margin: 0;
+    padding: 0;
+}
+
+.gh-post-upgrade-cta p {
+    margin: 20px 0 0;
+    padding: 0;
+}
+
+.gh-post-upgrade-cta small {
+    font-size: 16px;
+    letter-spacing: -0.2px;
+}
+
+.gh-post-upgrade-cta a {
+    color: #ffffff;
+    cursor: pointer;
+    font-weight: 500;
+    box-shadow: none;
+    text-decoration: underline;
+}
+
+.gh-post-upgrade-cta a:hover {
+    color: #ffffff;
+    opacity: 0.8;
+    box-shadow: none;
+    text-decoration: underline;
+}
+
+.gh-post-upgrade-cta a.gh-btn {
+    display: block;
+    background: #ffffff;
+    text-decoration: none;
+    margin: 28px 0 0;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.gh-post-upgrade-cta a.gh-btn:hover {
+    opacity: 0.92;
+}</style><script async="" src="./Implementing LLaMA 4 from Scratch_files/saved_resource"></script>
+    <script defer="" src="./Implementing LLaMA 4 from Scratch_files/sodo-search.min.js" data-key="933dba8c65eaaa9a2f6c0be670" data-styles="https://cdn.jsdelivr.net/ghost/sodo-search@~1.8/umd/main.css" data-sodo-search="https://daily-dose-of-data-science.ghost.io/" data-locale="en" crossorigin="anonymous"></script>
+    
+    <link href="https://www.dailydoseofds.com/webmentions/receive/" rel="webmention">
+    <script defer="" src="./Implementing LLaMA 4 from Scratch_files/cards.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="./Implementing LLaMA 4 from Scratch_files/cards.min.css">
+    <script defer="" src="./Implementing LLaMA 4 from Scratch_files/comment-counts.min.js" data-ghost-comments-counts-api="https://www.dailydoseofds.com/members/api/comments/counts/"></script>
+    <script defer="" src="./Implementing LLaMA 4 from Scratch_files/member-attribution.min.js"></script><style>:root {--ghost-accent-color: #54b6f2;}</style>
+    <script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="43b2ed2e-3626-48d0-8017-811d7371e623";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script><script src="./Implementing LLaMA 4 from Scratch_files/l.js" async=""></script>
+
+
+<style>
+    
+    .formkit-close {
+    display: none;
+}
+
+</style>
+
+<!-- Google tag (gtag.js) -->
+<script async="" src="./Implementing LLaMA 4 from Scratch_files/js"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-W0FQY1YMJT');
+</script>
+
+
+ <script>
+    !function () {var reb2b = window.reb2b = window.reb2b || [];
+    if (reb2b.invoked) return;reb2b.invoked = true;reb2b.methods = ["identify", "collect"];
+    reb2b.factory = function (method) {return function () {var args = Array.prototype.slice.call(arguments);
+    args.unshift(method);reb2b.push(args);return reb2b;};};
+    for (var i = 0; i < reb2b.methods.length; i++) {var key = reb2b.methods[i];reb2b[key] = reb2b.factory(key);}
+    reb2b.load = function (key) {var script = document.createElement("script");script.type = "text/javascript";script.async = true;
+    script.src = "https://s3-us-west-2.amazonaws.com/b2bjsstore/b/" + key + "/reb2b.js.gz";
+    var first = document.getElementsByTagName("script")[0];
+    first.parentNode.insertBefore(script, first);};
+    reb2b.SNIPPET_VERSION = "1.0.1";reb2b.load("46DJ4HMK7E61");}();
+  </script>
+
+
+<script defer="" data-domain="dailydoseofds.com" src="./Implementing LLaMA 4 from Scratch_files/script.js"></script>
+
+
+<style>
+                  .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0, 0, 0, 0.8);
+                    display: none;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 9999;
+                  }
+
+                  .overlay img {
+                    max-width: 90%;
+                    max-height: 90%;
+                    border-radius: 5px;
+                    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+                      cursor: zoom-in;
+                  }
+                  </style>
+
+                  <script>
+                      document.addEventListener('DOMContentLoaded', function() {
+                    var overlay = document.createElement('div');
+                    overlay.classList.add('overlay');
+                    overlay.addEventListener('click', function() {
+                      overlay.style.display = 'none';
+                    });
+                    document.body.appendChild(overlay);
+
+                    var images = document.querySelectorAll('.kg-image');
+                    images.forEach(function(image) {
+                      image.addEventListener('click', function() {
+                        var imgSrc = image.getAttribute('src');
+                        var imgAlt = image.getAttribute('alt');
+                        var img = document.createElement('img');
+                        img.setAttribute('src', imgSrc);
+                        img.setAttribute('alt', imgAlt);
+                        overlay.innerHTML = '';
+                        overlay.appendChild(img);
+                        overlay.style.display = 'flex';
+                      });
+                      image.addEventListener('mouseenter', function() {
+                        image.style.cursor = 'zoom-in';
+                      });
+                      image.addEventListener('mouseleave', function() {
+                        image.style.cursor = 'default';
+                      });
+                    });
+
+                    document.addEventListener('keydown', function(event) {
+                      if (event.key === 'Escape') {
+                        overlay.style.display = 'none';
+                      }
+                    });
+                  });
+                      
+                  </script>
+
+<script>
+    (function(u, x, s, n, i, f) {
+        if (window.location.href.includes("membership")) {
+            u.ux = u.ux || function() {
+                (u.ux.q = u.ux.q || []).push(arguments);
+            };
+            i = x.getElementsByTagName('head')[0];
+            f = x.createElement('script');
+            f.async = 1;
+            f.src = s + n;
+            i.appendChild(f);
+        }
+    })(window, document, 'https://api.uxsniff.com/cdn/js/uxsnf_track', '.js');
+</script>
+
+
+<style>
+/* Ensure video containers are responsive */
+.kg-video-card video {
+    width: 100% !important;
+    max-width: 100%;
+    height: auto !important;
+    object-fit: contain;
+}
+
+/* On small screens, prevent video overflow */
+@media (max-width: 768px) {
+    .kg-video-card {
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    video {
+        max-width: 100%;
+        height: auto !important;
+    }
+}
+</style>
+
+<script>
+function updateVideoControls() {
+    // Remove custom Ghost overlay and container if they exist
+    document.querySelectorAll('.kg-video-overlay, .kg-video-player-container').forEach(function(element) {
+        element.parentNode.removeChild(element);
+    });
+
+    document.querySelectorAll('video').forEach(function(video) {
+        video.setAttribute('controls', 'true');
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('controlsList', 'nodownload'); // This hides the download button in most browsers
+
+        // Responsive video styles
+        video.style.maxWidth = "100%";
+        video.style.height = "auto";
+
+        // Optional: click-to-toggle play/pause
+        video.addEventListener('click', function() {
+            if (video.paused) {
+                video.play();
+            } else {
+                video.pause();
+            }
+        });
+
+        // Optional: move playback slightly forward to avoid thumbnail-only state
+        video.addEventListener('loadedmetadata', function() {
+            video.currentTime = 1;
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateVideoControls();
+
+    // Watch for dynamically inserted videos (Ghost may inject them after page load)
+    const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList') {
+                updateVideoControls();
+            }
+        });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+});
+</script>
+
+
+    <script defer="" src="./Implementing LLaMA 4 from Scratch_files/ghost-stats.min.js" data-stringify-payload="false" data-datasource="analytics_events" data-storage="localStorage" data-host="https://www.dailydoseofds.com/.ghost/analytics/api/v1/page_hit" tb_site_uuid="d8254d8f-566a-42ac-8bcd-138671e20542" tb_post_uuid="c80351f7-c2b5-4f96-a9f6-fed9529ed780" tb_post_type="post" tb_member_uuid="undefined" tb_member_status="undefined"></script>
+  <style>.App{text-align:center}.App-logo{height:40vmin;pointer-events:none}@media (prefers-reduced-motion: no-preference){.App-logo{animation:App-logo-spin infinite 20s linear}}.App-header{background-color:#282c34;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:calc(10px + 2vmin);color:#fff}.App-link{color:#61dafb}@keyframes App-logo-spin{0%{transform:rotate(0)}to{transform:rotate(360deg)}}
+/*$vite$:1*/</style><style id="fit-vids-style">.fluid-width-video-wrapper{width:100%;position:relative;padding:0;}.fluid-width-video-wrapper iframe,.fluid-width-video-wrapper object,.fluid-width-video-wrapper embed {position:absolute;top:0;left:0;width:100%;height:100%;}</style><link href="https://client.relay.crisp.chat/" rel="dns-prefetch" crossorigin=""><link href="https://client.crisp.chat/" rel="preconnect" crossorigin=""><script src="./Implementing LLaMA 4 from Scratch_files/client.js" type="text/javascript" async=""></script><link href="./Implementing LLaMA 4 from Scratch_files/client_default.css" type="text/css" rel="stylesheet"><style type="text/css">.MathJax_Hover_Frame {border-radius: .25em; -webkit-border-radius: .25em; -moz-border-radius: .25em; -khtml-border-radius: .25em; box-shadow: 0px 0px 15px #83A; -webkit-box-shadow: 0px 0px 15px #83A; -moz-box-shadow: 0px 0px 15px #83A; -khtml-box-shadow: 0px 0px 15px #83A; border: 1px solid #A6D ! important; display: inline-block; position: absolute}
+.MathJax_Menu_Button .MathJax_Hover_Arrow {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; -khtml-border-radius: 4px; font-family: 'Courier New',Courier; font-size: 9px; color: #F0F0F0}
+.MathJax_Menu_Button .MathJax_Hover_Arrow span {display: block; background-color: #AAA; border: 1px solid; border-radius: 3px; line-height: 0; padding: 4px}
+.MathJax_Hover_Arrow:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_Hover_Arrow:hover span {background-color: #CCC!important}
+</style><style type="text/css">#MathJax_About {position: fixed; left: 50%; width: auto; text-align: center; border: 3px outset; padding: 1em 2em; background-color: #DDDDDD; color: black; cursor: default; font-family: message-box; font-size: 120%; font-style: normal; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 15px; -webkit-border-radius: 15px; -moz-border-radius: 15px; -khtml-border-radius: 15px; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_About.MathJax_MousePost {outline: none}
+.MathJax_Menu {position: absolute; background-color: white; color: black; width: auto; padding: 5px 0px; border: 1px solid #CCCCCC; margin: 0; cursor: default; font: menu; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 5px; -webkit-border-radius: 5px; -moz-border-radius: 5px; -khtml-border-radius: 5px; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+.MathJax_MenuItem {padding: 1px 2em; background: transparent}
+.MathJax_MenuArrow {position: absolute; right: .5em; padding-top: .25em; color: #666666; font-size: .75em}
+.MathJax_MenuActive .MathJax_MenuArrow {color: white}
+.MathJax_MenuArrow.RTL {left: .5em; right: auto}
+.MathJax_MenuCheck {position: absolute; left: .7em}
+.MathJax_MenuCheck.RTL {right: .7em; left: auto}
+.MathJax_MenuRadioCheck {position: absolute; left: .7em}
+.MathJax_MenuRadioCheck.RTL {right: .7em; left: auto}
+.MathJax_MenuLabel {padding: 1px 2em 3px 1.33em; font-style: italic}
+.MathJax_MenuRule {border-top: 1px solid #DDDDDD; margin: 4px 3px}
+.MathJax_MenuDisabled {color: GrayText}
+.MathJax_MenuActive {background-color: #606872; color: white}
+.MathJax_MenuDisabled:focus, .MathJax_MenuLabel:focus {background-color: #E8E8E8}
+.MathJax_ContextMenu:focus {outline: none}
+.MathJax_ContextMenu .MathJax_MenuItem:focus {outline: none}
+#MathJax_AboutClose {top: .2em; right: .2em}
+.MathJax_Menu .MathJax_MenuClose {top: -10px; left: -10px}
+.MathJax_MenuClose {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; font-family: 'Courier New',Courier; font-size: 24px; color: #F0F0F0}
+.MathJax_MenuClose span {display: block; background-color: #AAA; border: 1.5px solid; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; line-height: 0; padding: 8px 0 6px}
+.MathJax_MenuClose:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_MenuClose:hover span {background-color: #CCC!important}
+.MathJax_MenuClose:hover:focus {outline: none}
+</style><style type="text/css">.MathJax_Preview .MJXf-math {color: inherit!important}
+</style><style type="text/css">.MJX_Assistive_MathML {position: absolute!important; top: 0; left: 0; clip: rect(1px, 1px, 1px, 1px); padding: 1px 0 0 0!important; border: 0!important; height: 1px!important; width: 1px!important; overflow: hidden!important; display: block!important; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none}
+.MJX_Assistive_MathML.MJX_Assistive_MathML_Block {width: 100%!important}
+</style><style type="text/css">#MathJax_Zoom {position: absolute; background-color: #F0F0F0; overflow: auto; display: block; z-index: 301; padding: .5em; border: 1px solid black; margin: 0; font-weight: normal; font-style: normal; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; -webkit-box-sizing: content-box; -moz-box-sizing: content-box; box-sizing: content-box; box-shadow: 5px 5px 15px #AAAAAA; -webkit-box-shadow: 5px 5px 15px #AAAAAA; -moz-box-shadow: 5px 5px 15px #AAAAAA; -khtml-box-shadow: 5px 5px 15px #AAAAAA; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_ZoomOverlay {position: absolute; left: 0; top: 0; z-index: 300; display: inline-block; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+#MathJax_ZoomFrame {position: relative; display: inline-block; height: 0; width: 0}
+#MathJax_ZoomEventTrap {position: absolute; left: 0; top: 0; z-index: 302; display: inline-block; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+</style><style type="text/css">.MathJax_Preview {color: #888}
+#MathJax_Message {position: fixed; left: 1em; bottom: 1.5em; background-color: #E6E6E6; border: 1px solid #959595; margin: 0px; padding: 2px 8px; z-index: 102; color: black; font-size: 80%; width: auto; white-space: nowrap}
+#MathJax_MSIE_Frame {position: absolute; top: 0; left: 0; width: 0px; z-index: 101; border: 0px; margin: 0px; padding: 0px}
+.MathJax_Error {color: #CC0000; font-style: italic}
+</style><style type="text/css">.MJXp-script {font-size: .8em}
+.MJXp-right {-webkit-transform-origin: right; -moz-transform-origin: right; -ms-transform-origin: right; -o-transform-origin: right; transform-origin: right}
+.MJXp-bold {font-weight: bold}
+.MJXp-italic {font-style: italic}
+.MJXp-scr {font-family: MathJax_Script,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-frak {font-family: MathJax_Fraktur,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-sf {font-family: MathJax_SansSerif,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-cal {font-family: MathJax_Caligraphic,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-mono {font-family: MathJax_Typewriter,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-largeop {font-size: 150%}
+.MJXp-largeop.MJXp-int {vertical-align: -.2em}
+.MJXp-math {display: inline-block; line-height: 1.2; text-indent: 0; font-family: 'Times New Roman',Times,STIXGeneral,serif; white-space: nowrap; border-collapse: collapse}
+.MJXp-display {display: block; text-align: center; margin: 1em 0}
+.MJXp-math span {display: inline-block}
+.MJXp-box {display: block!important; text-align: center}
+.MJXp-box:after {content: " "}
+.MJXp-rule {display: block!important; margin-top: .1em}
+.MJXp-char {display: block!important}
+.MJXp-mo {margin: 0 .15em}
+.MJXp-mfrac {margin: 0 .125em; vertical-align: .25em}
+.MJXp-denom {display: inline-table!important; width: 100%}
+.MJXp-denom > * {display: table-row!important}
+.MJXp-surd {vertical-align: top}
+.MJXp-surd > * {display: block!important}
+.MJXp-script-box > *  {display: table!important; height: 50%}
+.MJXp-script-box > * > * {display: table-cell!important; vertical-align: top}
+.MJXp-script-box > *:last-child > * {vertical-align: bottom}
+.MJXp-script-box > * > * > * {display: block!important}
+.MJXp-mphantom {visibility: hidden}
+.MJXp-munderover {display: inline-table!important}
+.MJXp-over {display: inline-block!important; text-align: center}
+.MJXp-over > * {display: block!important}
+.MJXp-munderover > * {display: table-row!important}
+.MJXp-mtable {vertical-align: .25em; margin: 0 .125em}
+.MJXp-mtable > * {display: inline-table!important; vertical-align: middle}
+.MJXp-mtr {display: table-row!important}
+.MJXp-mtd {display: table-cell!important; text-align: center; padding: .5em 0 0 .5em}
+.MJXp-mtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-mlabeledtr {display: table-row!important}
+.MJXp-mlabeledtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mlabeledtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-merror {background-color: #FFFF88; color: #CC0000; border: 1px solid #CC0000; padding: 1px 3px; font-style: normal; font-size: 90%}
+.MJXp-scale0 {-webkit-transform: scaleX(.0); -moz-transform: scaleX(.0); -ms-transform: scaleX(.0); -o-transform: scaleX(.0); transform: scaleX(.0)}
+.MJXp-scale1 {-webkit-transform: scaleX(.1); -moz-transform: scaleX(.1); -ms-transform: scaleX(.1); -o-transform: scaleX(.1); transform: scaleX(.1)}
+.MJXp-scale2 {-webkit-transform: scaleX(.2); -moz-transform: scaleX(.2); -ms-transform: scaleX(.2); -o-transform: scaleX(.2); transform: scaleX(.2)}
+.MJXp-scale3 {-webkit-transform: scaleX(.3); -moz-transform: scaleX(.3); -ms-transform: scaleX(.3); -o-transform: scaleX(.3); transform: scaleX(.3)}
+.MJXp-scale4 {-webkit-transform: scaleX(.4); -moz-transform: scaleX(.4); -ms-transform: scaleX(.4); -o-transform: scaleX(.4); transform: scaleX(.4)}
+.MJXp-scale5 {-webkit-transform: scaleX(.5); -moz-transform: scaleX(.5); -ms-transform: scaleX(.5); -o-transform: scaleX(.5); transform: scaleX(.5)}
+.MJXp-scale6 {-webkit-transform: scaleX(.6); -moz-transform: scaleX(.6); -ms-transform: scaleX(.6); -o-transform: scaleX(.6); transform: scaleX(.6)}
+.MJXp-scale7 {-webkit-transform: scaleX(.7); -moz-transform: scaleX(.7); -ms-transform: scaleX(.7); -o-transform: scaleX(.7); transform: scaleX(.7)}
+.MJXp-scale8 {-webkit-transform: scaleX(.8); -moz-transform: scaleX(.8); -ms-transform: scaleX(.8); -o-transform: scaleX(.8); transform: scaleX(.8)}
+.MJXp-scale9 {-webkit-transform: scaleX(.9); -moz-transform: scaleX(.9); -ms-transform: scaleX(.9); -o-transform: scaleX(.9); transform: scaleX(.9)}
+.MathJax_PHTML .noError {vertical-align: ; font-size: 90%; text-align: left; color: black; padding: 1px 3px; border: 1px solid}
+</style></head>
+  <body class="post-template tag-hash-blog tag-llms"><div id="MathJax_Message" style="display: none;"></div>
+    <div class="progress-bar"></div>
+
+
+    <div id="parity-banner-container"></div>
+    
+
+    <header class="header js-header" data-nav-items="last-one">
+  <div class="container wrapper is-rel flex items-center">
+    <div class="header-brand">
+<a href="https://www.dailydoseofds.com/">          <picture class="default-logo">
+  <source sizes="(max-width: 800px) 200px, 320px" srcset="/content/images/size/w300/format/webp/2023/06/logo-subsatck2.svg 300w, /content/images/size/w600/format/webp/2023/06/logo-subsatck2.svg 600w" type="image/webp">
+  <img class="header__logo" sizes="(max-width: 800px) 200px, 320px" data-srcset="/content/images/size/w300/2023/06/logo-subsatck2.svg 300w, /content/images/size/w600/2023/06/logo-subsatck2.svg 600w" srcset="/content/images/size/w30/2023/06/logo-subsatck2.svg 30w" data-src="/content/images/size/w100/2023/06/logo-subsatck2.svg" src="./Implementing LLaMA 4 from Scratch_files/logo-subsatck2.svg" alt="Daily Dose of Data Science" loading="eager">
+</picture></a>    </div>
+
+    <span class="flex-1"></span>
+
+    <ul class="nav" data-items="9">
+
+
+
+
+        <li class="nav-sponsor" data-label="Sponsor" data-length="7" data-post="">
+          <a href="https://forms.gle/TFXp9ZzQzRbK76sh6">
+            <span>Sponsor</span>
+          </a>
+        <ul></ul></li>
+
+
+
+
+
+
+
+        <li class="nav-newsletter" data-label="Newsletter" data-length="10" data-post="">
+          <a href="https://join.dailydoseofds.com/">
+            <span>Newsletter</span>
+          </a>
+        <ul></ul></li>
+
+
+
+
+
+
+
+        <li class="nav-more is-toggle is-mainitem" data-label="More" data-length="4" data-post="">
+          <a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#">
+            <span>More</span>
+          </a>
+        <ul class="nav submenu"><li class="nav-contact is-subitem" data-label="- Contact" data-length="9" data-post="">
+          <a href="https://www.dailydoseofds.com/contact/">
+            <span> Contact</span>
+          </a>
+        </li><li class="nav-faqs is-subitem" data-label="- FAQs" data-length="6" data-post="">
+          <a href="https://www.dailydoseofds.com/faq/">
+            <span> FAQs</span>
+          </a>
+        </li><li class="nav-about is-subitem" data-label="- About" data-length="7" data-post="">
+          <a href="https://www.dailydoseofds.com/about/">
+            <span> About</span>
+          </a>
+        </li></ul></li>
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        <li class="nav-search" data-label="Search 🔎" data-length="9" data-post="">
+          <a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#/search/">
+            <span>Search 🔎</span>
+          </a>
+        <ul></ul></li>
+
+
+
+
+
+
+
+            <li class="nav-sign-in" data-label="Sign in" data-length="7" data-post="">
+            <a href="https://www.dailydoseofds.com/signin/">
+              <span">Sign in
+            </span"></a>
+          <ul></ul></li>
+        
+
+
+
+
+
+
+        <li class="nav-get-started" data-label="Get Started" data-length="11" data-post="last">
+          <a href="https://www.dailydoseofds.com/membership/">
+            <span style="color: white;">Get Started</span>
+          </a>
+        <ul></ul></li>
+
+
+
+</ul>
+
+    <button class="btn header-search-toggle" data-ghost-search="" title="Search" aria-label="Search">
+      <i class="icon icon-search">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <circle cx="10" cy="10" r="7"></circle>
+  <line x1="21" y1="21" x2="15" y2="15"></line>
+</svg>
+
+
+
+</i>    </button>
+
+    <button class="btn header-menu-toggle js-menu-toggle" title="Menu" aria-label="Menu">
+      <i class="icon icon-menu">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-menu" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <path d="M4 8l16 0"></path>
+  <path d="M4 16l16 0"></path>
+</svg>
+</i>      <i class="icon icon-x">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="24" height="24" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <line x1="18" y1="6" x2="6" y2="18"></line>
+  <line x1="6" y1="6" x2="18" y2="18"></line>
+</svg>
+</i>    </button>
+
+
+    <div class="member-menu js-member-menu">
+      <a href="https://www.dailydoseofds.com/signup/" class="signup-link">
+        <i class="icon icon-arrow-up-right icon--sm">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-arrow-up-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <line x1="17" y1="7" x2="7" y2="17"></line>
+  <polyline points="8 7 17 7 17 16"></polyline>
+</svg>
+
+
+
+</i>Sign up
+      </a>
+
+      <a href="https://www.dailydoseofds.com/signin/" class="signin-link">
+        <i class="icon icon-login icon--sm">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-log-in">
+  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+  <polyline points="10 17 15 12 10 7"></polyline>
+  <line x1="15" y1="12" x2="3" y2="12"></line>
+</svg>
+</i>Sign in
+      </a>
+</div>
+    <span class="border-bottom"></span>
+
+  </div>
+</header>
+
+
+    <div class="menu js-menu">
+  <nav class="menu-navigation">
+    <ul class="nav" data-items="9">
+
+
+
+
+        <li class="nav-sponsor" data-label="Sponsor" data-length="7" data-post="">
+          <a href="https://forms.gle/TFXp9ZzQzRbK76sh6">
+            <span>Sponsor</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+        <li class="nav-newsletter" data-label="Newsletter" data-length="10" data-post="">
+          <a href="https://join.dailydoseofds.com/">
+            <span>Newsletter</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+        <li class="nav-more is-toggle" data-label="More" data-length="4" data-post="">
+          <a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#">
+            <span>More</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+        <li class="nav-contact is-subitem" data-label="- Contact" data-length="9" data-post="">
+          <a href="https://www.dailydoseofds.com/contact/">
+            <span> Contact</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+        <li class="nav-faqs is-subitem" data-label="- FAQs" data-length="6" data-post="">
+          <a href="https://www.dailydoseofds.com/faq/">
+            <span> FAQs</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+        <li class="nav-about is-subitem" data-label="- About" data-length="7" data-post="">
+          <a href="https://www.dailydoseofds.com/about/">
+            <span> About</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+        <li class="nav-search" data-label="Search 🔎" data-length="9" data-post="">
+          <a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#/search/">
+            <span>Search 🔎</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+            <li class="nav-sign-in" data-label="Sign in" data-length="7" data-post="">
+            <a href="https://www.dailydoseofds.com/signin/">
+              <span">Sign in
+            </span"></a>
+          </li>
+        
+
+
+
+
+
+
+        <li class="nav-get-started" data-label="Get Started" data-length="11" data-post="last">
+          <a href="https://www.dailydoseofds.com/membership/">
+            <span style="color: white;">Get Started</span>
+          </a>
+        </li>
+
+
+
+</ul>
+
+  </nav>
+</div>
+      
+
+
+    <main class="main">
+      
+
+  <div class="container wrapper">
+    <div class="post-hero is-post " data-feature-image="true" style="border-bottom: 1px solid var(--color-border); margin: 2em auto 2em;">
+  
+  <div class="post-hero__content flex flex-col">
+      <time class="post-hero__date" datetime="2025-05-18">May 18, 2025</time> 
+
+    <h1 class="post-hero__title">Implementing LLaMA 4 from Scratch</h1>
+   
+      <p class="post-hero__excerpt text-acc">A from-scratch implementation of Llama 4 LLM, a mixture-of-experts model, using PyTorch code.</p>
+
+      <div class="post-authors">
+  <ul class="post-authors__avatars">
+        <li class="author-avatar has-image">
+          <a href="https://www.dailydoseofds.com/author/avi/" title="Avi Chawla" aria-label="Avi Chawla">
+              <picture class="">
+  <source sizes="62px" data-sizes="auto" srcset="/content/images/size/w30/format/webp/2024/12/avi-google.jpg 30w, /content/images/size/w100/format/webp/2024/12/avi-google.jpg 100w" data-srcset="/content/images/size/w30/format/webp/2024/12/avi-google.jpg 30w, /content/images/size/w100/format/webp/2024/12/avi-google.jpg 100w" type="image/webp">
+  <img class="lazyautosizes lazyloaded" sizes="62px" data-sizes="auto" data-srcset="/content/images/size/w30/2024/12/avi-google.jpg 30w, /content/images/size/w100/2024/12/avi-google.jpg 100w" srcset="/content/images/size/w30/2024/12/avi-google.jpg 30w, /content/images/size/w100/2024/12/avi-google.jpg 100w" data-src="/content/images/size/w100/2024/12/avi-google.jpg" src="./Implementing LLaMA 4 from Scratch_files/avi-google.jpg" alt="Avi Chawla">
+</picture>          </a>
+        </li>
+        <li class="author-avatar has-image">
+          <a href="https://www.dailydoseofds.com/author/akshay/" title="Akshay Pachaar" aria-label="Akshay Pachaar">
+              <picture class="">
+  <source sizes="62px" data-sizes="auto" srcset="/content/images/size/w30/format/webp/2024/11/38653995.png 30w, /content/images/size/w100/format/webp/2024/11/38653995.png 100w" data-srcset="/content/images/size/w30/format/webp/2024/11/38653995.png 30w, /content/images/size/w100/format/webp/2024/11/38653995.png 100w" type="image/webp">
+  <img class="lazyautosizes lazyloaded" sizes="62px" data-sizes="auto" data-srcset="/content/images/size/w30/2024/11/38653995.png 30w, /content/images/size/w100/2024/11/38653995.png 100w" srcset="/content/images/size/w30/2024/11/38653995.png 30w, /content/images/size/w100/2024/11/38653995.png 100w" data-src="/content/images/size/w100/2024/11/38653995.png" src="./Implementing LLaMA 4 from Scratch_files/38653995.png" alt="Akshay Pachaar">
+</picture>          </a>
+        </li>
+  </ul>
+  
+    <span class="post-authors-names"><a href="https://www.dailydoseofds.com/author/avi/">Avi Chawla</a>, <a href="https://www.dailydoseofds.com/author/akshay/">Akshay Pachaar</a></span>
+</div>  </div>
+
+</div>
+    <div class="post-toc js-post-toc is-rendered"> 
+  <button class="btn post-toc-toggle" aria-label="Table of Contents" onclick="this.parentNode.classList.toggle(&#39;is-visible&#39;)">
+    <span>Table of Contents</span>
+    <i class="icon icon-chevron-down icon--sm">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chevron-down" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+   <polyline points="6 9 12 15 18 9"></polyline>
+</svg>
+</i>  </button>
+  <div class="post-toc__content js-toc"><ol class="toc-list "><li class="toc-list-item is-active-li"><a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#introduction" class="toc-link node-name--H2  is-active-link">Introduction</a></li><li class="toc-list-item"><a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#why-mixture-of-experts-for-llms" class="toc-link node-name--H2 ">Why Mixture-of-Experts for LLMs?</a><ol class="toc-list  is-collapsible is-collapsed"><li class="toc-list-item"><a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#how-do-moes-work" class="toc-link node-name--H3 ">How do MoEs work?</a></li><li class="toc-list-item"><a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#analogy-1-to-understand-moes" class="toc-link node-name--H3 ">Analogy #1 to understand MoEs</a></li><li class="toc-list-item"><a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#analogy-2-to-understand-moes" class="toc-link node-name--H3 ">Analogy #2 to understand MoEs</a></li><li class="toc-list-item"><a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#token-prediction-steps" class="toc-link node-name--H3 ">Token prediction steps</a><ol class="toc-list  is-collapsible is-collapsed"><li class="toc-list-item"><a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#step-1-embedding-layer" class="toc-link node-name--H4 ">Step 1) Embedding Layer</a></li><li class="toc-list-item"><a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#step-2-masked-self-attention" class="toc-link node-name--H4 ">Step 2) Masked Self-Attention</a></li><li class="toc-list-item"><a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#step-3-moe-feed-forward-layer" class="toc-link node-name--H4 ">Step 3) MoE Feed-Forward Layer</a></li><li class="toc-list-item"><a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#step-4-final-projection-%E2%86%92-vocabulary-logits" class="toc-link node-name--H4 ">Step 4) Final Projection → Vocabulary Logits</a></li><li class="toc-list-item"><a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#step-5-sample-or-argmax" class="toc-link node-name--H4 ">Step 5) Sample or Argmax</a></li></ol></li></ol></li><li class="toc-list-item"><a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#implementation" class="toc-link node-name--H2 ">Implementation</a></li></ol></div>
+
+
+</div>
+
+    
+    
+    <article class="post tag-hash-blog tag-llms content post-access-paid">
+
+
+          <div class="kg-card kg-callout-card kg-callout-card-purple">
+
+	          <div class="kg-callout-emoji"> 👉 </div>
+
+	          <div id="parity-banner-container-blog" class="kg-callout-text"> <div class="">
+                      <div class="parity-banner-inner">Hey! This is a member-only post. But it looks like you are from <b>India 🇮🇳</b>. Join today by visiting this <b><u><a href="https://www.dailydoseofds.com/membership-29uj10po-cjd48sn1k/">membership page</a></u></b> for relief pricing of <b>50%</b> off on your subscription, FOREVER.</div>
+                    </div></div>
+
+          </div>
+
+          <hr>
+
+
+        
+      <div class="content post-sneak-peek" style="width: 96%;">
+  <h2 id="introduction">Introduction</h2><p>In recent months, LLaMA 4 has sparked plenty of conversation, not just because of its performance, but because of how it achieves that performance.</p><p>Unlike previous generations, LLaMA 4 doesn’t rely solely on the classic Transformer architecture. Instead, it uses a Mixture-of-Experts (MoE) approach, activating only a small subset of expert subnetworks per token.</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/0681d04f-0cd6-45a7-b1f1-a37f9269d01d_1116x1126.gif" class="kg-image" alt="" loading="lazy" width="1116" height="1126"></figure><p>This allows it to scale to hundreds of billions of parameters while keeping inference efficient and cost-effective.</p><p>But how does that actually work under the hood?</p><p>In this article, we’ll answer that by building an MoE-based Transformer from scratch. It will be a miniature, interpretable version of LLaMA 4, using nothing but Python and PyTorch.</p><p>By doing so, we’ll demystify the architecture powering modern LLMs like LLaMA 4 and Mixtral, and give you hands-on insight into how experts, routers, and sparse activation work in practice.</p><p>We'll walk through every stage of implementation:</p><ul><li>Character-level tokenization,</li><li>Multi-head self-attention with rotary positional embeddings (RoPE),</li><li>Sparse routing with multiple expert MLPs,</li><li>RMSNorm, residuals, and causal masking,</li><li>And finally, training and generation.</li></ul><p>Along the way, we’ll discuss why MoE matters, how it compares to standard feed-forward networks in Transformers, and what tradeoffs it introduces.</p><p>The goal is to help you understand both the theory and mechanics of MoE Transformers, not by reading another paper or GitHub README, but by building one line by line.</p><p>Let’s begin.</p><hr><h2 id="why-mixture-of-experts-for-llms">Why Mixture-of-Experts for LLMs?</h2><p>Large Language Models (LLMs) have grown massively in size, reaching tens or even hundreds of billions of parameters. One recent innovation to make these models more efficient is the Mixture-of-Experts (MoE) architecture.</p><p>Instead of every part of the model being active for every input, MoE networks activate only a subset of “expert” sub-networks for each token.</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/89aa177b-ab94-48f1-873f-787dd42d5f69_1080x846.gif" class="kg-image" alt="" loading="lazy" width="1080" height="846"></figure><p>This means only a fraction of the model’s parameters are used for each forward pass, reducing computation cost while preserving performance.</p><p>In other words, MoE lets us scale model capacity without a proportional increase in compute requirements.</p><p>To put it in perspective, Meta’s LLaMA 4 (the latest in the LLaMA series of LLMs) adopts an MoE architecture.</p><p>For example, LLaMA 4 Maverick uses 128 experts but activates just a few per token, achieving GPT-4-level performance at roughly half the inference cost.</p><p>MoE is a big reason why LLaMA 4 can be so large yet efficient – a sign of how important this idea is in current AI research.</p><h3 id="how-do-moes-work">How do MoEs work?</h3><p>Mixture of Experts (MoE) is a popular architecture that uses different "experts" to improve Transformer models.</p><p>The visual below explains how they differ from Transformers.</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/0681d04f-0cd6-45a7-b1f1-a37f9269d01d_1116x1126.gif" class="kg-image" alt="" loading="lazy" width="1116" height="1126"></figure><p>Let's dive in to learn more about MoE!</p><hr><p>Transformer and MoE differ in the decoder block:</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/f74ae548-d64b-46f0-9b10-414a2a045e5c_1292x816.gif" class="kg-image" alt="Image" loading="lazy" title="Image" width="1292" height="816"></figure><ul><li>Transformer uses a feed-forward network.</li><li>MoE uses experts, which are feed-forward networks but smaller compared to that in Transformer.</li></ul><p>During inference, a subset of experts are selected. This makes inference faster in MoE.</p><p>Also, since the network has multiple decoder layers:</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/89aa177b-ab94-48f1-873f-787dd42d5f69_1080x846.gif" class="kg-image" alt="" loading="lazy" width="1080" height="846"></figure><ul><li>the text passes through different experts across layers.</li><li>the chosen experts also differ between tokens.</li></ul><div class="kg-card kg-callout-card kg-callout-card-blue"><div class="kg-callout-emoji">💡</div><div class="kg-callout-text">In many Mixture-of-Experts architectures (including LLaMA 4), it’s common to include a shared expert in addition to the trainable expert networks.<br><br>While the router dynamically selects a few experts per token, the shared expert:<br>- Always processes every token, regardless of routing decisions<br>- Acts as a stabilizing fallback, especially useful when routing decisions are uncertain or sparse<br>- Helps improve generalization, ensuring that all tokens have at least one consistent path through the network<br><br>This shared path also helps reduce training variance and ensures there's always a baseline expert active, even early in training when expert specialization hasn’t emerged yet.</div></div><p>But how does the model decide which experts should be ideal?</p><p>The router does that.</p><p>The router is like a multi-class classifier that produces softmax scores over experts. Based on the scores, we select the top&nbsp;<code>K</code>&nbsp;experts.</p><p>The router is trained with the network and it learns to select the best experts.</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/acd5eba8-75b4-45e7-8a47-ca90ef7666fe_1094x662.gif" class="kg-image" alt="" loading="lazy" width="1094" height="662"></figure><p>But it isn't straightforward.</p><p>There are challenges.</p><p><strong>Challenge 1) Notice this pattern at the start of training:</strong></p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/23d13981-a8d2-435f-b1f4-9cf691ad8d6d_1874x774.gif" class="kg-image" alt="" loading="lazy" width="1456" height="601"></figure><ul><li>The model selects "Expert 2" (randomly since all experts are similar).</li><li>The selected expert gets a bit better.</li><li>It may get selected again since it’s the best.</li><li>This expert learns more.</li><li>The same expert can get selected again since it’s the best.</li><li>It learns even more.</li><li>And so on!</li></ul><p>Essentially, this way, many experts go under-trained!</p><p>We solve this in two steps:</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/b64800ec-666c-443e-8994-1aead584f9db_1568x702.gif" class="kg-image" alt="" loading="lazy" width="1456" height="652"></figure><ul><li>Add noise to the feed-forward output of the router so that other experts can get higher logits.</li><li>Set all but top&nbsp;<code>K</code>&nbsp;logits to&nbsp;<code>-infinity</code>. After softmax, these scores become zero.</li></ul><p>This way, other experts also get the opportunity to train.</p><p><strong>Challenge 2) Some experts may get exposed to more tokens than others, leading to under-trained experts.</strong></p><p>We prevent this by limiting the number of tokens an expert can process.</p><p>If an expert reaches the limit, the input token is passed to the next best expert instead.</p><p>MoEs have more parameters to load. However, a fraction of them are activated since we only select some experts.</p><p>This leads to faster inference. Mixtral 8x7B by MistralAI is one famous LLM that is based on MoE.</p><p>Most recently, Llama 4 also adhered to the MoE architecture, which is exactly what we are mimicking today!</p><hr><h3 id="analogy-1-to-understand-moes">Analogy #1 to understand MoEs</h3><p>Training one giant neural network to “know everything” is hard.</p><p>Imagine instead you have a team of specialists, each expert at a certain type of task, plus a manager who assigns work to the best-suited specialist.</p><p>For example, if you’re running a company, you might hire an electrician, a plumber, a painter, each excels at different jobs; and a manager who decides which specialist should handle a given problem.</p><p>That’s essentially how an MoE model works! Instead of one monolithic network handling all inputs, an MoE layer contains multiple expert subnetworks (usually simple feed-forward networks), and a small router network that chooses which expert(s) should process each input token.</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/acd5eba8-75b4-45e7-8a47-ca90ef7666fe_1094x662.gif" class="kg-image" alt="" loading="lazy" width="1094" height="662"></figure><p>As shown in the figure above, a router (gate) receives each token’s representation and decides which expert networks to activate for that token.</p><p>In this sketch, the router chooses among four expert MLPs. Only the selected expert(s) perform computations for the token, and their outputs are combined.</p><p>This sparse activation allows the model to scale up the number of experts without increasing computation for each token.</p><p>Concretely, the router produces a set of scores or weights for the experts based on the token’s features.</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/image-12.png" class="kg-image" alt="" loading="lazy" width="2000" height="926" srcset="https://www.dailydoseofds.com/content/images/size/w600/2025/05/image-12.png 600w, https://www.dailydoseofds.com/content/images/size/w1000/2025/05/image-12.png 1000w, https://www.dailydoseofds.com/content/images/size/w1600/2025/05/image-12.png 1600w, https://www.dailydoseofds.com/content/images/size/w2400/2025/05/image-12.png 2400w" sizes="(min-width: 720px) 720px"></figure><p>It then selects the top-scoring expert(s) (say the best 2 or 3) and sends the token’s data to those experts.</p><p>The chosen experts each output a transformed vector, and the router uses its scores to weight and combine those expert outputs back into a single output vector for the token.</p><p>All other experts remain inactive for that token, saving compute. Different tokens in the same batch can go to different experts depending on the content. This way, an MoE layer dynamically allocates specialized processing for each token.</p><p>For example, imagine our model processing the sentence “Facebook was founded.”</p><p>When the MoE layer sees the token “was”, the router might determine that Expert 2 and Expert 4 are the best specialists for this token.</p><p>It gives, say, a 70% weight to Expert 1 and 30% to Expert 3.</p><p>Only those two experts get to work, while Experts 2 and 4 are ignored for “was”.</p><p>The model then combines the outputs of Experts 1 and 3 (weighted 0.7 and 0.3) to form the final output for that token.</p><p>In the next token “founded”, the router might choose a different set of experts, and so on. This dynamic routing is the key idea of MoE.</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/image-12.png" class="kg-image" alt="" loading="lazy" width="2000" height="926" srcset="https://www.dailydoseofds.com/content/images/size/w600/2025/05/image-12.png 600w, https://www.dailydoseofds.com/content/images/size/w1000/2025/05/image-12.png 1000w, https://www.dailydoseofds.com/content/images/size/w1600/2025/05/image-12.png 1600w, https://www.dailydoseofds.com/content/images/size/w2400/2025/05/image-12.png 2400w" sizes="(min-width: 720px) 720px"></figure><p>For instance, as shown in the figure above for the router mechanics on the token “was”, the router examines the input “was” and selects two experts (out of four) as the top performers for this token. In this illustration, Expert 1 and Expert 3 are chosen with weights 0.7 and 0.3, respectively.</p><p>Experts 1 and 3 are ignored (dashed outlines) for this token. Only Expert 1 and 3 compute their outputs, which will later be combined by the router’s weights. By activating just a couple of experts per token, the model saves computation.</p><h3 id="analogy-2-to-understand-moes">Analogy #2 to understand MoEs</h3><p>If you followed our AI Agents crash course, you already know the power of breaking a monolithic agent into specialized components, specifically a research agent, writer agent, and so forth, each with their own role in a coordinated system.</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/image-4.png" class="kg-image" alt="" loading="lazy" width="1454" height="363" srcset="https://www.dailydoseofds.com/content/images/size/w600/2025/05/image-4.png 600w, https://www.dailydoseofds.com/content/images/size/w1000/2025/05/image-4.png 1000w, https://www.dailydoseofds.com/content/images/2025/05/image-4.png 1454w" sizes="(min-width: 720px) 720px"></figure><p>MoE takes a similar leap.</p><p>Think of a standard Transformer as a single-agent system. It’s like hiring one really smart generalist to do everything, write code, analyze data, design UI, write documentation.</p><p>MoE is the multi-agent version of model design. Instead of one generalist, you build a team of specialists, one expert in math, one in writing, another in reasoning, and you add a router to decide who gets what input.</p><p>Not everyone gets activated every time. Just like in multi-agent systems, only the most relevant experts are called in based on the task.</p><p>This produces a more compute-efficient, specialization-driven intelligence with sparse activation, ensuring you get the benefits of scale without paying the full cost each time.</p><hr><h3 id="token-prediction-steps">Token prediction steps</h3><p>To understand how token prediction works inside a Mixture-of-Experts (MoE) Transformer, let’s walk through what happens under the hood when the model is given the prompt:</p><blockquote class="kg-blockquote-alt">“Facebook was founded”</blockquote><p>We’ll assume word-level tokenization and a vocabulary that maps:</p>
+<!--kg-card-begin: html-->
+<div style="overflow:hidden;margin-left:auto;margin-right:auto;border-radius:10px;width:100%;max-width:332px;position:relative"><div style="width:100%;padding-bottom:56.62650602409639%"></div><iframe width="332" height="188" title="" src="./Implementing LLaMA 4 from Scratch_files/404ed201-345c-4448-bec2-aa0103ab213f.html" allow="clipboard-write" allowfullscreen="" loading="lazy" style="background:linear-gradient(337deg,#654EA3FF,#DA98B4FF);position:absolute;left:0;top:0;width:100%" frameborder="0"></iframe></div>
+<!--kg-card-end: html-->
+<p></p><p>Let’s say we feed this sequence to the model with the goal of predicting the next word (e.g., “in”, “by”, “in 2004”, etc.).</p><p>Here’s how the model processes it, step by step:</p><h4 id="step-1-embedding-layer">Step 1) Embedding Layer</h4><p>Each token is converted to an embedding, which is a dense vector that captures semantic meaning. So the model maps:</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/image-18.png" class="kg-image" alt="" loading="lazy" width="492" height="384"></figure><ul><li>“Facebook” → vector F (e.g., a 128-dimensional vector)</li><li>“was” → vector W</li><li>“founded” → vector D</li></ul><p>These embeddings are also enriched with positional information via RoPE (rotary positional encoding), so the model knows “Facebook” comes first, “was” second, and so on.</p><h4 id="step-2-masked-self-attention">Step 2) Masked Self-Attention</h4><p>The embeddings go through a self-attention mechanism, where each word can look at others in the sequence to gather context.</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/image-19.png" class="kg-image" alt="" loading="lazy" width="1440" height="483" srcset="https://www.dailydoseofds.com/content/images/size/w600/2025/05/image-19.png 600w, https://www.dailydoseofds.com/content/images/size/w1000/2025/05/image-19.png 1000w, https://www.dailydoseofds.com/content/images/2025/05/image-19.png 1440w" sizes="(min-width: 720px) 720px"></figure><p>For example:</p><ul><li>“founded” attends to “was” and “Facebook”</li><li>“was” attends to “Facebook”</li></ul><p>After this, each token’s vector now encodes context. The vector for “founded” might now reflect a contextualized meaning like:</p><blockquote>“This word follows a proper noun (‘Facebook’) and a past-tense verb (‘was’), so probably it's a past participle.”</blockquote><h4 id="step-3-moe-feed-forward-layer">Step 3) MoE Feed-Forward Layer</h4><p>This is where things get interesting.</p><p>Instead of sending “founded” through a single feed-forward layer, the model passes it to a router, which is a lightweight neural network that decides which experts (sub-networks) should process it.</p><p>Let’s say we have 4 experts:</p><ul><li>Expert 1: good at verbs</li><li>Expert 2: good at dates and numbers</li><li>Expert 3: good at proper nouns and entities</li><li>Expert 4: good at temporal phrases</li></ul><p>The router takes the context-aware vector of “founded” and assigns weights to each expert. For example:</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/image-12.png" class="kg-image" alt="" loading="lazy" width="2000" height="926" srcset="https://www.dailydoseofds.com/content/images/size/w600/2025/05/image-12.png 600w, https://www.dailydoseofds.com/content/images/size/w1000/2025/05/image-12.png 1000w, https://www.dailydoseofds.com/content/images/size/w1600/2025/05/image-12.png 1600w, https://www.dailydoseofds.com/content/images/size/w2400/2025/05/image-12.png 2400w" sizes="(min-width: 720px) 720px"></figure><ul><li>Expert 1: 0.7</li><li>Expert 3: 0.3</li><li>(Experts 2 and 4 are ignored)</li></ul><p>Only these two experts are activated. Each processes the “founded” vector through its own MLP and produces an output. The final output is a weighted combination:</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/image-13.png" class="kg-image" alt="" loading="lazy" width="2000" height="1035" srcset="https://www.dailydoseofds.com/content/images/size/w600/2025/05/image-13.png 600w, https://www.dailydoseofds.com/content/images/size/w1000/2025/05/image-13.png 1000w, https://www.dailydoseofds.com/content/images/size/w1600/2025/05/image-13.png 1600w, https://www.dailydoseofds.com/content/images/size/w2400/2025/05/image-13.png 2400w" sizes="(min-width: 720px) 720px"></figure><p>This output becomes the representation for the word “founded” after the MoE layer.</p><h4 id="step-4-final-projection-%E2%86%92-vocabulary-logits">Step 4) Final Projection → Vocabulary Logits</h4><p>Once all tokens pass through the stack of Transformer blocks (each with self-attention and MoE), the final vector for the last token (“founded”) is used to predict the next token.</p><figure class="kg-card kg-image-card"><img src="./Implementing LLaMA 4 from Scratch_files/image-14.png" class="kg-image" alt="" loading="lazy" width="759" height="294" srcset="https://www.dailydoseofds.com/content/images/size/w600/2025/05/image-14.png 600w, https://www.dailydoseofds.com/content/images/2025/05/image-14.png 759w" sizes="(min-width: 720px) 720px"></figure><p>This is done via a final linear layer (a projection from embedding dimension to vocabulary size). The output is a logits vector, a score for every possible word in the vocabulary.</p><p>We apply softmax to turn these logits into probabilities. Let’s say the model predicts:</p><pre><code>"in"       → 38%  
+"by"       → 21%  
+"2004"     → 14%  
+"Mark"     → 9%  
+"the"      → 6%  
+... (rest of vocab)</code></pre><p>The most probable next word is “in”.</p><h4 id="step-5-sample-or-argmax">Step 5) Sample or Argmax</h4><p>At inference time, we can either:</p><ul><li>Sample: pick the next word based on the probability distribution (adds variety), </li><li>Argmax: pick the word with the highest probability (more deterministic).</li></ul><p>The chosen word is appended to the prompt, and the whole process repeats to predict the next word after that.</p><p>Sampling is controlled with Temperature, which we covered here:</p><figure class="kg-card kg-bookmark-card"><a class="kg-bookmark-container" href="https://www.dailydoseofds.com/p/what-is-temperature-in-llms/"><div class="kg-bookmark-content"><div class="kg-bookmark-title">What is Temperature in LLMs?</div><div class="kg-bookmark-description">Predictable ↔ Random.</div><div class="kg-bookmark-metadata"><img class="kg-bookmark-icon" src="./Implementing LLaMA 4 from Scratch_files/logo-subsatck2-1-67.svg" alt=""><span class="kg-bookmark-author">Daily Dose of Data Science</span><span class="kg-bookmark-publisher">Avi Chawla</span></div></div><div class="kg-bookmark-thumbnail"><img src="./Implementing LLaMA 4 from Scratch_files/Capture-2024-12-18-001922.png" alt="" onerror="this.style.display = &#39;none&#39;"></div></a></figure><hr><p>So to recap, for each token:</p><ol><li>It's embedded into a vector with positional info.</li><li>It attends to previous tokens to gain context.</li><li>It is passed to a router that picks the top experts.</li><li>Only those experts are activated, making computation sparse.</li><li>The outputs from the experts are combined into a final vector.</li><li>The last token’s final vector is used to predict the next token.</li></ol><hr><p>Now that we understand what goes into a single token prediction, it's time for us to get into the implementation.</p><p>By the end of this tutorial, you will understand how to implement a simplified MoE Transformer language model from scratch using PyTorch.</p><p>We’ll build all the pieces step by step, including tokenization, embedding layers, self-attention with positional encodings, the MoE layer with multiple experts, normalization, and residual connections, and finally the training loop and text generation.</p><p>The style will be hands-on and conversational. We’ll print shapes and intermediate steps in the code to illuminate what’s happening under the hood, so you can follow along easily. Let’s get started!</p><hr><h2 id="implementation">Implementation</h2><p>Now that we’ve covered the architecture and all its key building blocks, which include embeddings, RoPE, self-attention, and the Mixture-of-Experts (MoE) layer, it's time to bring everything together.</p><p>In this section, we'll build a complete end-to-end language model inspired by the core principles of LLaMA 4.</p><p>The focus will be on showing how the MoE component integrates into the Transformer pipeline, not just theoretically, but through a fully working mini-implementation.</p><p>We’ll follow a bottom-up approach where every stage of the pipeline is exposed:</p><ul><li>Each token gets embedded,</li><li>Positional context is injected through rotary encodings,</li><li>Self-attention allows tokens to learn from one another,</li><li>MoE layers route each token to the right subset of experts,</li><li>And finally, the model learns to predict the next word.</li></ul><p>You can download the code below:</p>
+</div>
+
+<div class="content-cta paid">
+  <div class="content-cta__content">
+    <h2 class="content-cta__title">Read the full article</h2>
+      <p class="content-cta__description">
+        Sign up 
+        now to read the full article and get access to all articles for 
+        paying subscribers only.
+      </p>
+
+
+        <a class="cta-action btn btn--brand" href="https://www.dailydoseofds.com/membership/" style="color: white;">
+                Join today!
+              </a> 
+
+      <div class="small">
+        <span>Already have an account?</span>
+
+        <a href="https://www.dailydoseofds.com/signin/" class="content-cta-alt link-no-style">
+          Sign in
+        </a>
+      </div>
+  </div>
+</div>
+    </article>
+
+  </div>
+
+    
+
+      <section class="read-next pt-xl pb-lg">
+      <div class="container wrapper">
+        <h2 class="section-title">Read next</h2>
+        <div class="post-feed mb-lg" data-feed="list">
+
+              <article class="post-card has-img js-post-card" data-date="Aug 17, 2025" data-aspect-ratio="auto">
+  
+<a class="post-card__media" href="https://www.dailydoseofds.com/mlops-crash-course-part-4/">      <figure>
+        <picture class="">
+  <source sizes="280px" data-sizes="auto" srcset="/content/images/size/w30/2025/08/Sanyog-MLOps_-_I-1.png 30w" data-srcset="/content/images/size/w300/format/webp/2025/08/Sanyog-MLOps_-_I-1.png 300w, /content/images/size/w600/format/webp/2025/08/Sanyog-MLOps_-_I-1.png 600w, /content/images/size/w1000/format/webp/2025/08/Sanyog-MLOps_-_I-1.png 1000w" type="image/webp">
+  <img class="lazyload" sizes="280px" data-sizes="auto" data-srcset="/content/images/size/w300/2025/08/Sanyog-MLOps_-_I-1.png 300w, /content/images/size/w600/2025/08/Sanyog-MLOps_-_I-1.png 600w, /content/images/size/w1000/2025/08/Sanyog-MLOps_-_I-1.png 1000w" srcset="/content/images/size/w30/2025/08/Sanyog-MLOps_-_I-1.png 30w" data-src="/content/images/size/w100/2025/08/Sanyog-MLOps_-_I-1.png" src="./Implementing LLaMA 4 from Scratch_files/Sanyog-MLOps_-_I-1.png" alt="The Full MLOps Blueprint: Reproducibility and Versioning in ML Systems—Part B (With Implementation)">
+</picture>      </figure>
+</a>
+  <div class="post-card__content flex flex-col ">
+    <div class="post-card__info">
+        <a class="post-tag tag-mlops" href="https://www.dailydoseofds.com/tag/mlops/" aria-label="MLOps">MLOps</a>
+
+      <time class="post-card__date" datetime="2025-08-17">Aug 17, 2025</time> 
+
+        <span class="m-l-sm m-r-sm">•</span>
+        <span class="post-card__date">25 min read</span>
+
+      
+      <span class="flex-1"></span>
+
+        <span class="post-card__visibility" data-tooltip="paid" tabindex="0">
+          <i class="icon icon-lock icon--14">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+  <circle cx="12" cy="16" r="1"></circle>
+  <path d="M8 11v-4a4 4 0 0 1 8 0v4"></path>
+</svg>
+
+
+
+</i>
+        </span>
+
+    </div>
+
+      <h2 class="post-card__title"><a href="https://www.dailydoseofds.com/mlops-crash-course-part-4/">The Full MLOps Blueprint: Reproducibility and Versioning in ML Systems—Part B (With Implementation)</a></h2>
+
+    <p class="post-card__excerpt">MLOps and LLMOps Crash Course—Part 4.</p>
+
+    <div class="post-authors">
+  <ul class="post-authors__avatars">
+        <li class="author-avatar has-image">
+          <a href="https://www.dailydoseofds.com/author/avi/" title="Avi Chawla" aria-label="Avi Chawla">
+              <picture class="">
+  <source sizes="60px" data-sizes="auto" srcset="/content/images/size/w30/2024/12/avi-google.jpg 30w" data-srcset="/content/images/size/w30/format/webp/2024/12/avi-google.jpg 30w, /content/images/size/w100/format/webp/2024/12/avi-google.jpg 100w" type="image/webp">
+  <img class="lazyload" sizes="60px" data-sizes="auto" data-srcset="/content/images/size/w30/2024/12/avi-google.jpg 30w, /content/images/size/w100/2024/12/avi-google.jpg 100w" srcset="/content/images/size/w30/2024/12/avi-google.jpg 30w" data-src="/content/images/size/w100/2024/12/avi-google.jpg" src="./Implementing LLaMA 4 from Scratch_files/avi-google(1).jpg" alt="Avi Chawla">
+</picture>          </a>
+        </li>
+        <li class="author-avatar has-image">
+          <a href="https://www.dailydoseofds.com/author/akshay/" title="Akshay Pachaar" aria-label="Akshay Pachaar">
+              <picture class="">
+  <source sizes="60px" data-sizes="auto" srcset="/content/images/size/w30/2024/11/38653995.png 30w" data-srcset="/content/images/size/w30/format/webp/2024/11/38653995.png 30w, /content/images/size/w100/format/webp/2024/11/38653995.png 100w" type="image/webp">
+  <img class="lazyload" sizes="60px" data-sizes="auto" data-srcset="/content/images/size/w30/2024/11/38653995.png 30w, /content/images/size/w100/2024/11/38653995.png 100w" srcset="/content/images/size/w30/2024/11/38653995.png 30w" data-src="/content/images/size/w100/2024/11/38653995.png" src="./Implementing LLaMA 4 from Scratch_files/38653995(1).png" alt="Akshay Pachaar">
+</picture>          </a>
+        </li>
+  </ul>
+  
+    <span class="post-authors-names"><a href="https://www.dailydoseofds.com/author/avi/">Avi Chawla</a>, <a href="https://www.dailydoseofds.com/author/akshay/">Akshay Pachaar</a></span>
+</div>  </div>
+
+</article>            
+
+              <article class="post-card has-img js-post-card" data-date="Aug 10, 2025" data-aspect-ratio="auto">
+  
+<a class="post-card__media" href="https://www.dailydoseofds.com/mlops-crash-course-part-3/">      <figure>
+        <picture class="">
+  <source sizes="280px" data-sizes="auto" srcset="/content/images/size/w30/2025/08/Sanyog-MLOps_-_I.png 30w" data-srcset="/content/images/size/w300/format/webp/2025/08/Sanyog-MLOps_-_I.png 300w, /content/images/size/w600/format/webp/2025/08/Sanyog-MLOps_-_I.png 600w, /content/images/size/w1000/format/webp/2025/08/Sanyog-MLOps_-_I.png 1000w" type="image/webp">
+  <img class="lazyload" sizes="280px" data-sizes="auto" data-srcset="/content/images/size/w300/2025/08/Sanyog-MLOps_-_I.png 300w, /content/images/size/w600/2025/08/Sanyog-MLOps_-_I.png 600w, /content/images/size/w1000/2025/08/Sanyog-MLOps_-_I.png 1000w" srcset="/content/images/size/w30/2025/08/Sanyog-MLOps_-_I.png 30w" data-src="/content/images/size/w100/2025/08/Sanyog-MLOps_-_I.png" src="./Implementing LLaMA 4 from Scratch_files/Sanyog-MLOps_-_I.png" alt="The Full MLOps Blueprint: Reproducibility and Versioning in ML Systems—Part A (With Implementation)">
+</picture>      </figure>
+</a>
+  <div class="post-card__content flex flex-col ">
+    <div class="post-card__info">
+        <a class="post-tag tag-mlops" href="https://www.dailydoseofds.com/tag/mlops/" aria-label="MLOps">MLOps</a>
+
+      <time class="post-card__date" datetime="2025-08-10">Aug 10, 2025</time> 
+
+        <span class="m-l-sm m-r-sm">•</span>
+        <span class="post-card__date">28 min read</span>
+
+      
+      <span class="flex-1"></span>
+
+        <span class="post-card__visibility" data-tooltip="paid" tabindex="0">
+          <i class="icon icon-lock icon--14">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+  <circle cx="12" cy="16" r="1"></circle>
+  <path d="M8 11v-4a4 4 0 0 1 8 0v4"></path>
+</svg>
+
+
+
+</i>
+        </span>
+
+    </div>
+
+      <h2 class="post-card__title"><a href="https://www.dailydoseofds.com/mlops-crash-course-part-3/">The Full MLOps Blueprint: Reproducibility and Versioning in ML Systems—Part A (With Implementation)</a></h2>
+
+    <p class="post-card__excerpt">MLOps and LLMOps Crash Course—Part 3.</p>
+
+    <div class="post-authors">
+  <ul class="post-authors__avatars">
+        <li class="author-avatar has-image">
+          <a href="https://www.dailydoseofds.com/author/avi/" title="Avi Chawla" aria-label="Avi Chawla">
+              <picture class="">
+  <source sizes="60px" data-sizes="auto" srcset="/content/images/size/w30/2024/12/avi-google.jpg 30w" data-srcset="/content/images/size/w30/format/webp/2024/12/avi-google.jpg 30w, /content/images/size/w100/format/webp/2024/12/avi-google.jpg 100w" type="image/webp">
+  <img class="lazyload" sizes="60px" data-sizes="auto" data-srcset="/content/images/size/w30/2024/12/avi-google.jpg 30w, /content/images/size/w100/2024/12/avi-google.jpg 100w" srcset="/content/images/size/w30/2024/12/avi-google.jpg 30w" data-src="/content/images/size/w100/2024/12/avi-google.jpg" src="./Implementing LLaMA 4 from Scratch_files/avi-google(1).jpg" alt="Avi Chawla">
+</picture>          </a>
+        </li>
+        <li class="author-avatar has-image">
+          <a href="https://www.dailydoseofds.com/author/akshay/" title="Akshay Pachaar" aria-label="Akshay Pachaar">
+              <picture class="">
+  <source sizes="60px" data-sizes="auto" srcset="/content/images/size/w30/2024/11/38653995.png 30w" data-srcset="/content/images/size/w30/format/webp/2024/11/38653995.png 30w, /content/images/size/w100/format/webp/2024/11/38653995.png 100w" type="image/webp">
+  <img class="lazyload" sizes="60px" data-sizes="auto" data-srcset="/content/images/size/w30/2024/11/38653995.png 30w, /content/images/size/w100/2024/11/38653995.png 100w" srcset="/content/images/size/w30/2024/11/38653995.png 30w" data-src="/content/images/size/w100/2024/11/38653995.png" src="./Implementing LLaMA 4 from Scratch_files/38653995(1).png" alt="Akshay Pachaar">
+</picture>          </a>
+        </li>
+  </ul>
+  
+    <span class="post-authors-names"><a href="https://www.dailydoseofds.com/author/avi/">Avi Chawla</a>, <a href="https://www.dailydoseofds.com/author/akshay/">Akshay Pachaar</a></span>
+</div>  </div>
+
+</article>            
+
+              <article class="post-card has-img js-post-card" data-date="Aug 3, 2025" data-aspect-ratio="auto">
+  
+<a class="post-card__media" href="https://www.dailydoseofds.com/mlops-crash-course-part-2/">      <figure>
+        <picture class="">
+  <source sizes="280px" data-sizes="auto" srcset="/content/images/size/w30/2025/07/Sanyog-MLOps_-_I-1.png 30w" data-srcset="/content/images/size/w300/format/webp/2025/07/Sanyog-MLOps_-_I-1.png 300w, /content/images/size/w600/format/webp/2025/07/Sanyog-MLOps_-_I-1.png 600w, /content/images/size/w1000/format/webp/2025/07/Sanyog-MLOps_-_I-1.png 1000w" type="image/webp">
+  <img class="lazyload" sizes="280px" data-sizes="auto" data-srcset="/content/images/size/w300/2025/07/Sanyog-MLOps_-_I-1.png 300w, /content/images/size/w600/2025/07/Sanyog-MLOps_-_I-1.png 600w, /content/images/size/w1000/2025/07/Sanyog-MLOps_-_I-1.png 1000w" srcset="/content/images/size/w30/2025/07/Sanyog-MLOps_-_I-1.png 30w" data-src="/content/images/size/w100/2025/07/Sanyog-MLOps_-_I-1.png" src="./Implementing LLaMA 4 from Scratch_files/Sanyog-MLOps_-_I-1(1).png" alt="The Full MLOps Blueprint: The Machine Learning System Lifecycle">
+</picture>      </figure>
+</a>
+  <div class="post-card__content flex flex-col ">
+    <div class="post-card__info">
+        <a class="post-tag tag-mlops" href="https://www.dailydoseofds.com/tag/mlops/" aria-label="MLOps">MLOps</a>
+
+      <time class="post-card__date" datetime="2025-08-03">Aug 3, 2025</time> 
+
+        <span class="m-l-sm m-r-sm">•</span>
+        <span class="post-card__date">29 min read</span>
+
+      
+      <span class="flex-1"></span>
+
+        <span class="post-card__visibility" data-tooltip="paid" tabindex="0">
+          <i class="icon icon-lock icon--14">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+  <circle cx="12" cy="16" r="1"></circle>
+  <path d="M8 11v-4a4 4 0 0 1 8 0v4"></path>
+</svg>
+
+
+
+</i>
+        </span>
+
+    </div>
+
+      <h2 class="post-card__title"><a href="https://www.dailydoseofds.com/mlops-crash-course-part-2/">The Full MLOps Blueprint: The Machine Learning System Lifecycle</a></h2>
+
+    <p class="post-card__excerpt">MLOps and LLMOps Crash Course—Part 2.</p>
+
+    <div class="post-authors">
+  <ul class="post-authors__avatars">
+        <li class="author-avatar has-image">
+          <a href="https://www.dailydoseofds.com/author/avi/" title="Avi Chawla" aria-label="Avi Chawla">
+              <picture class="">
+  <source sizes="60px" data-sizes="auto" srcset="/content/images/size/w30/2024/12/avi-google.jpg 30w" data-srcset="/content/images/size/w30/format/webp/2024/12/avi-google.jpg 30w, /content/images/size/w100/format/webp/2024/12/avi-google.jpg 100w" type="image/webp">
+  <img class="lazyload" sizes="60px" data-sizes="auto" data-srcset="/content/images/size/w30/2024/12/avi-google.jpg 30w, /content/images/size/w100/2024/12/avi-google.jpg 100w" srcset="/content/images/size/w30/2024/12/avi-google.jpg 30w" data-src="/content/images/size/w100/2024/12/avi-google.jpg" src="./Implementing LLaMA 4 from Scratch_files/avi-google(1).jpg" alt="Avi Chawla">
+</picture>          </a>
+        </li>
+        <li class="author-avatar has-image">
+          <a href="https://www.dailydoseofds.com/author/akshay/" title="Akshay Pachaar" aria-label="Akshay Pachaar">
+              <picture class="">
+  <source sizes="60px" data-sizes="auto" srcset="/content/images/size/w30/2024/11/38653995.png 30w" data-srcset="/content/images/size/w30/format/webp/2024/11/38653995.png 30w, /content/images/size/w100/format/webp/2024/11/38653995.png 100w" type="image/webp">
+  <img class="lazyload" sizes="60px" data-sizes="auto" data-srcset="/content/images/size/w30/2024/11/38653995.png 30w, /content/images/size/w100/2024/11/38653995.png 100w" srcset="/content/images/size/w30/2024/11/38653995.png 30w" data-src="/content/images/size/w100/2024/11/38653995.png" src="./Implementing LLaMA 4 from Scratch_files/38653995(1).png" alt="Akshay Pachaar">
+</picture>          </a>
+        </li>
+  </ul>
+  
+    <span class="post-authors-names"><a href="https://www.dailydoseofds.com/author/avi/">Avi Chawla</a>, <a href="https://www.dailydoseofds.com/author/akshay/">Akshay Pachaar</a></span>
+</div>  </div>
+
+</article>            
+      </div>
+        
+      </div>
+    </section>
+
+
+
+
+
+<!--
+  <div class="related-posts mb-lg">
+        </div>
+
+-->
+    </main>
+
+      
+    <section class="cta-section" style="--color-accent:var(--color-dark)">
+      <div class="container wrapper">
+        <div class="cta pr-0 pb-0">
+          <div class="cta-content">
+            <h2 class="cta-title">Join the Daily Dose of Data Science Today!</h2>
+            <p class="cta-excerpt">A daily column with insights, observations, tutorials, and best practices on data science.</p>
+              <a class="cta-action btn btn--brand" href="https://www.dailydoseofds.com/membership/" style="color: white;">
+                Get Started!
+              </a>
+          </div>
+            <figure class="cta-media">
+              <picture class="">
+  <source sizes="280px" data-sizes="auto" srcset="https://images.unsplash.com/photo-1545987796-200677ee1011?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=jpg&amp;ixid=M3wxMTc3M3wwfDF8c2VhcmNofDV8fGRhdGF8ZW58MHx8fHwxNjg4ODgyMjkwfDA&amp;ixlib=rb-4.0.3&amp;q=80&amp;w=30 30w" data-srcset="https://images.unsplash.com/photo-1545987796-200677ee1011?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=webp&amp;ixid=M3wxMTc3M3wwfDF8c2VhcmNofDV8fGRhdGF8ZW58MHx8fHwxNjg4ODgyMjkwfDA&amp;ixlib=rb-4.0.3&amp;q=80&amp;w=300 300w, https://images.unsplash.com/photo-1545987796-200677ee1011?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=webp&amp;ixid=M3wxMTc3M3wwfDF8c2VhcmNofDV8fGRhdGF8ZW58MHx8fHwxNjg4ODgyMjkwfDA&amp;ixlib=rb-4.0.3&amp;q=80&amp;w=600 600w, https://images.unsplash.com/photo-1545987796-200677ee1011?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=webp&amp;ixid=M3wxMTc3M3wwfDF8c2VhcmNofDV8fGRhdGF8ZW58MHx8fHwxNjg4ODgyMjkwfDA&amp;ixlib=rb-4.0.3&amp;q=80&amp;w=1000 1000w, https://images.unsplash.com/photo-1545987796-200677ee1011?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=webp&amp;ixid=M3wxMTc3M3wwfDF8c2VhcmNofDV8fGRhdGF8ZW58MHx8fHwxNjg4ODgyMjkwfDA&amp;ixlib=rb-4.0.3&amp;q=80&amp;w=2000 2000w" type="image/webp">
+  <img class="lazyload cta-inner__img" sizes="280px" data-sizes="auto" data-srcset="https://images.unsplash.com/photo-1545987796-200677ee1011?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=jpg&amp;ixid=M3wxMTc3M3wwfDF8c2VhcmNofDV8fGRhdGF8ZW58MHx8fHwxNjg4ODgyMjkwfDA&amp;ixlib=rb-4.0.3&amp;q=80&amp;w=300 300w, https://images.unsplash.com/photo-1545987796-200677ee1011?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=jpg&amp;ixid=M3wxMTc3M3wwfDF8c2VhcmNofDV8fGRhdGF8ZW58MHx8fHwxNjg4ODgyMjkwfDA&amp;ixlib=rb-4.0.3&amp;q=80&amp;w=600 600w, https://images.unsplash.com/photo-1545987796-200677ee1011?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=jpg&amp;ixid=M3wxMTc3M3wwfDF8c2VhcmNofDV8fGRhdGF8ZW58MHx8fHwxNjg4ODgyMjkwfDA&amp;ixlib=rb-4.0.3&amp;q=80&amp;w=1000 1000w, https://images.unsplash.com/photo-1545987796-200677ee1011?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=jpg&amp;ixid=M3wxMTc3M3wwfDF8c2VhcmNofDV8fGRhdGF8ZW58MHx8fHwxNjg4ODgyMjkwfDA&amp;ixlib=rb-4.0.3&amp;q=80&amp;w=2000 2000w" srcset="https://images.unsplash.com/photo-1545987796-200677ee1011?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=jpg&amp;ixid=M3wxMTc3M3wwfDF8c2VhcmNofDV8fGRhdGF8ZW58MHx8fHwxNjg4ODgyMjkwfDA&amp;ixlib=rb-4.0.3&amp;q=80&amp;w=30 30w" data-src="https://images.unsplash.com/photo-1545987796-200677ee1011?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=jpg&amp;ixid=M3wxMTc3M3wwfDF8c2VhcmNofDV8fGRhdGF8ZW58MHx8fHwxNjg4ODgyMjkwfDA&amp;ixlib=rb-4.0.3&amp;q=80&amp;w=100" src="./Implementing LLaMA 4 from Scratch_files/photo-1545987796-200677ee1011" alt="Join the Daily Dose of Data Science Today!">
+</picture>            </figure>
+        </div>
+      </div>
+    </section>
+
+
+    <footer class="footer">
+  <div class="container wrapper">
+    <span class="footer-top"></span>
+    <div class="row">
+      <div class="col-xs-12 col-md-5">
+        <div class="footer__brand flex items-center">
+            <picture class="default-logo">
+  <source sizes="200px" data-sizes="auto" srcset="/content/images/size/w30/2023/06/logo-subsatck2.svg 30w" data-srcset="/content/images/size/w300/format/webp/2023/06/logo-subsatck2.svg 300w, /content/images/size/w600/format/webp/2023/06/logo-subsatck2.svg 600w" type="image/webp">
+  <img class="footer__logo mr lazyload" sizes="200px" data-sizes="auto" data-srcset="/content/images/size/w300/2023/06/logo-subsatck2.svg 300w, /content/images/size/w600/2023/06/logo-subsatck2.svg 600w" srcset="/content/images/size/w30/2023/06/logo-subsatck2.svg 30w" data-src="/content/images/size/w100/2023/06/logo-subsatck2.svg" src="./Implementing LLaMA 4 from Scratch_files/logo-subsatck2.svg" alt="Daily Dose of Data Science">
+</picture>        </div>
+
+        <div class="footer__description" id="footer-input-label">
+          A daily column with insights, observations, tutorials and best practices on python and data science. Read by industry professionals at big tech, startups, and engineering students, across:
+        </div>
+
+        <div class="social-links">
+          
+  <a href="https://x.com/_avichawla" class="twitter" aria-label="Twitter"><i class="icon icon-twitter icon--sm">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z"></path>
+</svg>
+
+
+
+</i><span>Twitter</span></a>
+
+<a href="https://www.linkedin.com/in/avi-chawla/" class="Linkedin" aria-label="LinkedIn"><i class="icon icon-linkedin icon--sm">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-linkedin">
+  <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+  <rect x="2" y="9" width="4" height="12"></rect>
+  <circle cx="4" cy="4" r="2"></circle>
+</svg>
+</i><span>LinkedIn</span></a>
+
+<a href="https://github.com/ChawlaAvi/Daily-Dose-of-Data-Science" class="github" aria-label="Github"><i class="icon icon-github icon--sm">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <desc>Download more icon variants from https://tabler-icons.io/i/brand-github</desc>
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5"></path>
+</svg>
+
+
+
+</i><span>Github</span></a>
+
+<a href="https://www.dailydoseofds.com/rss" class="rss" aria-label="RSS"><i class="icon icon-rss icon--sm">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-rss" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <circle cx="5" cy="19" r="1"></circle>
+  <path d="M4 4a16 16 0 0 1 16 16"></path>
+  <path d="M4 11a9 9 0 0 1 9 9"></path>
+</svg>
+
+
+
+</i><span>RSS</span></a>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+
+      <div class="col-xs-12 col-md-7">
+        <span class="fw-700 mb-sm display-block text-12">Navigation</span>
+        <ul class="nav" data-items="9">
+
+
+
+
+        <li class="nav-sponsor" data-label="Sponsor" data-length="7" data-post="">
+          <a href="https://forms.gle/TFXp9ZzQzRbK76sh6">
+            <span>Sponsor</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+        <li class="nav-newsletter" data-label="Newsletter" data-length="10" data-post="">
+          <a href="https://join.dailydoseofds.com/">
+            <span>Newsletter</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+        <li class="nav-more is-toggle" data-label="More" data-length="4" data-post="">
+          <a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#">
+            <span>More</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+        <li class="nav-contact is-subitem" data-label="- Contact" data-length="9" data-post="">
+          <a href="https://www.dailydoseofds.com/contact/">
+            <span> Contact</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+        <li class="nav-faqs is-subitem" data-label="- FAQs" data-length="6" data-post="">
+          <a href="https://www.dailydoseofds.com/faq/">
+            <span> FAQs</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+        <li class="nav-about is-subitem" data-label="- About" data-length="7" data-post="">
+          <a href="https://www.dailydoseofds.com/about/">
+            <span> About</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+        <li class="nav-search" data-label="Search 🔎" data-length="9" data-post="">
+          <a href="https://www.dailydoseofds.com/building-llama-4-from-scratch-with-python/#/search/">
+            <span>Search 🔎</span>
+          </a>
+        </li>
+
+
+
+
+
+
+
+            <li class="nav-sign-in" data-label="Sign in" data-length="7" data-post="">
+            <a href="https://www.dailydoseofds.com/signin/">
+              <span">Sign in
+            </span"></a>
+          </li>
+        
+
+
+
+
+
+
+        <li class="nav-get-started" data-label="Get Started" data-length="11" data-post="last">
+          <a href="https://www.dailydoseofds.com/membership/">
+            <span style="color: white;">Get Started</span>
+          </a>
+        </li>
+
+
+
+</ul>
+
+      </div>
+    </div>
+
+    <div class="footer__bottom">
+      <div class="footer__copy">
+        <span>©2025&nbsp;<a href="https://www.dailydoseofds.com/">Daily Dose of Data Science</a>.</span>
+        <span>All rights reserved.</span>
+      </div>
+
+      </div>
+
+  </div>
+</footer>
+
+    <dialog class="notification">
+  <i class="icon icon-success notification-icon">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-circle-check" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <circle cx="12" cy="12" r="9"></circle>
+  <path d="M9 12l2 2l4 -4"></path>
+</svg>
+
+
+
+</i>  <i class="icon icon-error notification-icon">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-alert-octagon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <path d="M8.7 3h6.6c.3 0 .5 .1 .7 .3l4.7 4.7c.2 .2 .3 .4 .3 .7v6.6c0 .3 -.1 .5 -.3 .7l-4.7 4.7c-.2 .2 -.4 .3 -.7 .3h-6.6c-.3 0 -.5 -.1 -.7 -.3l-4.7 -4.7c-.2 -.2 -.3 -.4 -.3 -.7v-6.6c0 -.3 .1 -.5 .3 -.7l4.7 -4.7c.2 -.2 .4 -.3 .7 -.3z"></path>
+  <line x1="12" y1="8" x2="12" y2="12"></line>
+  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+</svg>
+
+
+
+</i>  <i class="icon icon-warning notification-icon">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-alert-triangle" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <path d="M12 9v2m0 4v.01"></path>
+  <path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75"></path>
+</svg>
+
+
+
+</i>  <p class="notification-msg signup-success">Great! You’ve successfully signed up. Please check your email.</p> 
+  <p class="notification-msg signin-success">Welcome back! You've successfully signed in.</p> 
+  <p class="notification-msg subscribe-success">You've successfully subscribed to Daily Dose of Data Science.</p> 
+  <p class="notification-msg link-expired">Your link has expired.</p> 
+  <p class="notification-msg checkout-success">Success! Check your email for magic link to sign-in.</p> 
+  <p class="notification-msg billing-success">Success! Your billing info has been updated.</p> 
+  <p class="notification-msg billing-cancel">Your billing was not updated.</p> 
+  <button class="notification-close js-notification-close" aria-label="Close" onclick="closeNotification(event.currentTarget.parentNode);">
+    <i class="icon icon-x">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="24" height="24" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+  <line x1="18" y1="6" x2="6" y2="18"></line>
+  <line x1="6" y1="6" x2="18" y2="18"></line>
+</svg>
+</i>  </button>
+</dialog>
+
+      
+    
+
+      <script>
+    document.addEventListener('readystatechange', function(event) {
+      if (document.readyState === "complete") {
+        // table of contents toggle
+        const postToc = document.querySelector('.js-post-toc');
+
+        // media query for TOC function
+        //const mqSmall = window.matchMedia('(max-width: 1200px)');
+        //const mqLarge = window.matchMedia('(min-width: 1280px)');
+
+        if (postToc && !isInViewport('.header') && !isInViewport('.read-next')) 
+          postToc.classList.add('is-active');
+
+        window.addEventListener('scroll', (event) => {
+          if ( isInViewport('.header') || isInViewport('.read-next') || isInViewport('.footer')) {
+            postToc.classList.remove('is-active');
+          } else {
+            postToc.classList.add('is-active');
+          }
+        });
+
+        const headerStyle = document.querySelector('.js-header').getAttribute('data-style');
+        let headerOffset = headerStyle === 'sticky' ? 80 : 20;
+
+        if (postToc) {
+          tocbot.init({
+            // Where to render the table of contents.
+            tocSelector: '.js-toc',
+            // Where to grab the headings to build the table of contents.
+            contentSelector: '.content',
+            // Which headings to grab inside of the contentSelector element.
+            headingSelector: 'h2,h3,h4,h5,h6',
+            // Ignore some headings (like header card and toggle card)
+            ignoreSelector: '[class*="kg-"],[class*="content-cta"],[class*="post-bottom"]',
+            // For headings inside relative or absolute positioned containers within content.
+            hasInnerContainers: false,
+            // smooth scroll
+            scrollSmooth: false,
+            // offset
+            headingsOffset: headerOffset,
+          });
+
+          document.querySelector('.js-toc .toc-list') ? postToc.classList.add('is-rendered') : null;
+        }
+      }
+    });
+
+        // Add this to your site's JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+      const toc = document.querySelector('.post-toc');
+      if (toc) {
+        // Add is-visible class by default on desktop
+        if (window.innerWidth >= 1024) {
+          toc.classList.add('is-visible');
+        }
+      }
+    });
+  </script>
+
+<script>
+  const navItems = document.querySelectorAll('.header .nav:not(.submenu) li')
+  const allNavItems = document.querySelectorAll('.is-subitem')
+
+  // Remove '-' signs
+  allNavItems.forEach(item => {
+    const itemName = item.querySelector('a span')
+    itemName.innerText = itemName.innerText.slice(1)
+  });
+
+  // Add subitems in place
+  let subMenu, hasItems
+  navItems.forEach((item, index) => {
+    if (item.classList.contains('is-subitem') && !navItems[index - 1].classList.contains('is-subitem')) navItems[index - 1].classList.add('is-mainitem'); 
+    subMenu = item.classList.contains('is-subitem') ? subMenu : document.createElement('ul');
+    if (item.classList.contains('is-subitem')) { 
+      subMenu.appendChild(item)
+      subMenu.classList.add('nav','submenu')
+    } else { 
+      item.appendChild(subMenu)
+    }
+  });
+</script>
+
+  <script>
+    // Give the parameter a variable name
+    const qsParams = new URLSearchParams(window.location.search);
+    const isAction = qsParams.has('action');
+    const isStripe = qsParams.has('stripe');
+    const success = qsParams.get('success');
+    const action = qsParams.get('action');
+    const stripe = qsParams.get('stripe');
+
+    if (qsParams && isAction) {
+      if (success === "true") {
+        switch (action) {
+          case 'subscribe':
+            openNotification('subscribe-success');
+            break;
+          case 'signup': 
+            openNotification('signup-success');
+            break;
+          case 'signin':
+            openNotification('signin-success');
+            break;
+          default:
+            break;
+        }
+      } else {
+        openNotification('link-expired');
+      }
+    }
+
+    if (qsParams && isStripe) {
+      switch (stripe) {
+        case 'success':
+          openNotification('checkout-success');
+          break;
+        case 'billing-update-success':
+          openNotification('billing-success');
+          break;
+        case 'billing-update-cancel':
+          openNotification('billing-cancel');
+          break;
+        default:
+          break;
+      }
+    }
+
+    /**
+    * Handle Notifications
+    */
+    function openNotification(type) {
+      const notification = document.querySelector('dialog.notification');
+      if (notification) { 
+        notification.setAttribute('data-msg-type', type);
+        notification.show();
+        setTimeout(function(){ closeNotification(notification); }, 7000);
+      }
+    }
+    
+    /**
+    * Clean URI
+    */
+    function clearURI() {
+      window.history.replaceState({}, '', `${window.location.pathname}`);
+    }
+
+    function closeNotification(notification) {
+      notification.close();
+      clearURI();
+      setTimeout(function(){ notification.removeAttribute('data-msg-type') }, 500);
+    }
+  </script>
+
+
+    <script>
+  // Check if the current URL contains "membership-"
+if (window.location.href.includes("membership-n1")) {
+  // Use the pushState method to change the URL without triggering a page reload
+  window.history.pushState({}, "", "https://www.dailydoseofds.com/membership");
+}
+  
+</script>
+
+
+
+            <script>
+
+              const currentPageURL = window.location.pathname;
+
+              if (currentPageURL === '/membership/' || currentPageURL === '/account/') {
+
+
+              fetch(`https://api.paritydeals.com/api/v1/deals/discount/?url=${window.location.href}`)
+              .then(response => response.json())
+              .then(data => {
+                const { country, countryFlag, couponCode, discountPercentage, isVpn} = data;
+                const formattedCouponCode = `<b><u>${couponCode}</u></b>`;
+                const formattedCountry = `<b>${country} ${countryFlag}</b>`;
+                const formattedDiscountPercentage = parseFloat(discountPercentage).toFixed(0);
+
+                if (!isVpn && typeof couponCode !== 'undefined') {
+                const bannerMessage = `Hey! It looks like you are from ${formattedCountry}. Visit this <b><u><a href="${couponCode}">membership page</a></u></b> for relief pricing of <b>${formattedDiscountPercentage}%</b> off on your subscription, FOREVER.`;
+
+                // Create the banner element
+                const bannerElement = document.createElement('div');
+                bannerElement.className = 'parity-banner';
+                bannerElement.innerHTML = `
+                  <div class="parity-banner-inner">${bannerMessage}</div>
+                `;
+
+                // Append the banner element to the container
+                const container = document.getElementById('parity-banner-container-member');
+                container.appendChild(bannerElement);
+                
+
+                if ((currentPageURL === '/membership/' || currentPageURL === '/account/') && country === 'India') {
+                  const monthlyPortalIndia = "signup/646da4fccbf5e50001b8cba2/monthly";
+                  const yearlyPortalIndia = "signup/646da4fccbf5e50001b8cba2/yearly";
+
+                  // Get the links with data-portal attribute
+                  const links = document.querySelectorAll('[data-portal]');
+
+                  // Loop through the links and modify the data-portal attribute if the country is India
+                  links.forEach(link => {
+                    const portalValue = link.getAttribute('data-portal');
+                      if (portalValue.includes('monthly')) {
+                        link.setAttribute('data-portal', monthlyPortalIndia);
+                      } 
+
+                      else if (portalValue.includes('yearly')) {
+                        link.setAttribute('data-portal', yearlyPortalIndia);
+                      }
+                    
+                  });
+
+                  // var element = document.getElementById("yearly_main_page");
+                  // if (element) {
+                  //       element.href = "https://buy.stripe.com/aEU7sLbml5zh7Fm6pw";
+                  //     }
+
+
+                  var element = document.getElementById("lifetime_main_page");
+                  if (element) {
+                        element.href = "https://buy.stripe.com/3cs7sL1LL3r98JqdS8";
+                      }
+
+
+                }
+              }
+
+
+              })
+              .catch(error => {
+                console.error('Error:', error);
+              });
+
+            }
+
+            </script>    
+      
+
+
+
+                <script>
+
+                  fetch(`https://api.paritydeals.com/api/v1/deals/discount/?url=${window.location.href}`)
+                  .then(response => response.json())
+                  .then(data => {
+                    const { country, countryFlag, couponCode, discountPercentage, isVpn} = data;
+                    const formattedCouponCode = `<b><u>${couponCode}</u></b>`;
+                    const formattedCountry = `<b>${country} ${countryFlag}</b>`;
+                    const formattedDiscountPercentage = parseFloat(discountPercentage).toFixed(0);
+
+
+
+
+                    if (!isVpn && typeof couponCode !== 'undefined') {
+                    const bannerMessage = `Hey! This is a member-only post. But it looks like you are from ${formattedCountry}. Join today by visiting this <b><u><a href="${couponCode}">membership page</a></u></b> for relief pricing of <b>${formattedDiscountPercentage}%</b> off on your subscription, FOREVER.`;
+
+                    // Create the banner element
+                    const bannerElement = document.createElement('div');
+                    bannerElement.className = '';
+                    bannerElement.innerHTML = `
+                      <div class="parity-banner-inner">${bannerMessage}</div>
+                    `;
+
+                    // Append the banner element to the container
+
+                    const container_blog = document.getElementById('parity-banner-container-blog');
+                    container_blog.appendChild(bannerElement);
+
+                    
+                  }
+
+                  else{
+
+                    const bannerMessage = `Hey! This is a member-only post. Join today by visitng this <b><u><a href="https://www.dailydoseofds.com/membership/">membership page</a></u></b> to unlock all articles.`;
+
+                    // Create the banner element
+                    const bannerElement = document.createElement('div');
+                    bannerElement.className = '';
+                    bannerElement.innerHTML = `
+                      <div class="parity-banner-inner">${bannerMessage}</div>
+                    `;
+
+                    // Append the banner element to the container
+
+                    const container_blog = document.getElementById('parity-banner-container-blog');
+                    container_blog.appendChild(bannerElement);
+
+
+                  }
+
+
+
+
+                  })
+                  .catch(error => {
+                    console.error('Error:', error);
+                  });
+
+
+                </script>  
+
+
+
+
+
+
+  
+
+<div id="ghost-portal-root"></div><div id="sodo-search-root"></div><div class="overlay"></div><div aria-live="polite" class="crisp-client"><div class="cc-rukbw"><div class="cc-9yvsj"><style type="text/css">.crisp-client *:focus-visible {
+  outline-color: #27556A !important;
+}
+
+.crisp-client .cc-1brb6 .cc-co79q {
+  color: #FFFFFF !important;
+}
+
+.crisp-client .cc-1brb6 .cc-1dvce {
+  color: #447991 !important;
+}
+
+.crisp-client .cc-1brb6 .cc-5t1tm {
+  background-color: #FFFFFF !important;
+}
+
+.crisp-client .cc-1brb6 .cc-1q2sq {
+  background-color: #27556A !important;
+}
+
+.crisp-client .cc-1brb6 .cc-62iw4 {
+  background-color: #3C7189 !important;
+}
+
+.crisp-client .cc-1brb6 .cc-1kgzy {
+  background-color: #447991 !important;
+}
+
+.crisp-client .cc-1brb6 .cc-1kgzy *:focus-visible {
+  outline-color: #F0F2F5 !important;
+}
+
+.crisp-client .cc-1brb6 .cc-m59gn {
+  background-color: #F2F7F8 !important;
+}
+
+.crisp-client .cc-1brb6 .cc-jtuj4 {
+  background-color: #F0F2F5 !important;
+}
+
+.crisp-client .cc-1brb6 .cc-1ikmr {
+  border-color: #FFFFFF !important;
+}
+
+.crisp-client .cc-1brb6 .cc-1i61z,
+.crisp-client .cc-1brb6 .cc-134r8:hover {
+  border-color: #447991 !important;
+}
+
+.crisp-client .cc-1brb6 .cc-un6tk {
+  border-color: rgba(68, 121, 145, 0.2) !important;
+}
+
+.crisp-client .cc-1brb6 .cc-weiiy {
+  border-bottom-color: #447991 !important;
+}
+
+.crisp-client .cc-1brb6 .cc-18tkz::placeholder {
+  color: #66788A !important;
+}
+
+.crisp-client .cc-1brb6 .cc-10xgc::placeholder {
+  color: #66788A !important;
+}
+
+.crisp-client .cc-1brb6 .cc-y2afy,
+.crisp-client .cc-1brb6 .cc-y2afy:active,
+.crisp-client .cc-1brb6 .cc-1swm7:hover .cc-17cww,
+.crisp-client .cc-1brb6 .cc-1swm7 .cc-17cww:active {
+  background: #27556A !important;
+}
+
+.crisp-client .cc-1brb6 .cc-coh7k,
+.crisp-client .cc-1brb6 .cc-1cx9a:hover,
+.crisp-client .cc-1brb6 .cc-1xhex[data-active="true"] .cc-ydjl9 {
+  background: #32657C !important;
+}
+
+.crisp-client .cc-1brb6 .cc-y2afy:hover,
+.crisp-client .cc-1brb6 .cc-coh7k:hover,
+.crisp-client .cc-1brb6 .cc-1cx9a:active {
+  background: #2A5A70 !important;
+}
+
+.crisp-client .cc-1brb6 .cc-coh7k:active {
+  background: #27556A !important;
+}
+
+.crisp-client .cc-1brb6 .cc-aoc5z:hover .cc-fajgc {
+  background: #32657C !important;
+}
+
+.crisp-client .cc-1brb6 .cc-aoc5z .cc-fajgc:active {
+  background: #2A5A70 !important;
+}
+
+.crisp-client .cc-1brb6 .cc-f5i1a,
+.crisp-client .cc-1brb6 .cc-70ynx:hover .cc-iuh54,
+.crisp-client .cc-1brb6 .cc-70ynx .cc-iuh54:active {
+  background: #447991 !important;
+}
+
+.crisp-client .cc-1brb6 .cc-f5i1a:hover {
+  background: #3C7189 !important;
+}
+
+.crisp-client .cc-1brb6 .cc-f5i1a:active {
+  background: #32657C !important;
+}
+
+.crisp-client .cc-1brb6 .cc-vibqn::selection,
+.crisp-client .cc-1brb6 .cc-vibqn *::selection {
+  color: #1c293b !important;
+  background-color: #DCEDF6 !important;
+}</style></div><div class="cc-k4lmp"><style type="text/css">.crisp-client .cc-1brb6 {
+  z-index: 1000000;
+}</style></div></div><div id="crisp-chatbox" lang="en" dir="ltr" translate="no" tabindex="-1" class="cc-1brb6" data-hidden="false" data-force-show="false" data-color-mode="light" data-availability="online" data-lock-maximized="false" data-website-logo="false" data-last-operator-face="false" data-ongoing-operator-face="false" data-availability-tooltip="false" data-hide-vacation="false" data-blocked="false" data-mobile-view="false" data-full-view="false" data-small-view="true" data-large-view="false" data-has-local-messages="false" data-was-availability-online="true" data-is-activity-ongoing="false" data-hide-on-away="false" data-hide-on-mobile="false" data-position-reverse="true"><div class="cc-1yy0g cc-1wive cc-vibqn"><a data-maximized="false" data-is-failure="false" class="cc-1m2mf" tabindex="0" role="button" aria-label="Open chat" data-pane-animate-entrance="false" data-pop="minimized:open"><span class="cc-6lwfw"><!--v-if--></span><span class="cc-157aw cc-1kgzy"><span data-id="chat_closed" data-is-ongoing="false" class="cc-d73fc"><span class="cc-1bvfm cc-hshc7"><!--v-if--></span></span></span></a></div></div></div><iframe name="__privateStripeMetricsController2180" frameborder="0" allowtransparency="true" scrolling="no" role="presentation" allow="payment *" src="./Implementing LLaMA 4 from Scratch_files/m-outer-3437aaddcdf6922d623e172c2d6f9278.html" aria-hidden="true" tabindex="-1" style="border: none !important; margin: 0px !important; padding: 0px !important; width: 1px !important; min-width: 100% !important; overflow: hidden !important; display: block !important; visibility: hidden !important; position: fixed !important; height: 1px !important; pointer-events: none !important; user-select: none !important;"></iframe></body></html>

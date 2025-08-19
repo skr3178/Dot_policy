@@ -219,7 +219,6 @@ class DOTPolicy(PreTrainedPolicy):
         loss_weights = loss_weights.view(1, -1, 1)
         self.register_buffer("loss_weights", loss_weights)
 
-        # TODO: properly move it to dataloader and process on CPU
         # Nearest interpolation is required for PushT but may be not the best in general
         self.resize_transform = transforms.Resize(
             config.rescale_shape, interpolation=InterpolationMode.NEAREST

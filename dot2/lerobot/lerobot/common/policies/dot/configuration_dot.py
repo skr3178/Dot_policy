@@ -122,7 +122,7 @@ class DOTConfig(PreTrainedConfig):
         far_past_obs = list(
             range(
                 -self.lookback_aug - self.lookback_obs_steps, self.lookback_aug + 1 - self.lookback_obs_steps
-            )
+            ) #-5-10, 5+1-10
         )
         recent_obs = list(range(2 - self.n_obs_steps, 1))
 
@@ -133,7 +133,7 @@ class DOTConfig(PreTrainedConfig):
         far_past_actions = list(
             range(
                 -self.lookback_aug - self.lookback_obs_steps, self.lookback_aug + 1 - self.lookback_obs_steps
-            )
+            ) # -5-10, 5+1-10
         )
         recent_actions = list(range(2 - self.n_obs_steps, self.train_horizon))
 

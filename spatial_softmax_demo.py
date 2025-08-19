@@ -182,3 +182,4 @@ if __name__ == "__main__":
     print("\n2. Interactive demonstration (adjust temperature with slider):")
     interactive_spatial_softmax(image_path)
 
+

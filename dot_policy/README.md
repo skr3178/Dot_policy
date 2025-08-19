@@ -254,6 +254,10 @@ I provide 2 additional parameters to optimize the inference process: `predict_ev
   - Only partially unfreeze the backbone (freeze first layers and train only the last ones)
   - Use LoRA (https://arxiv.org/abs/2106.09685) to limit trainable parameters and significantly regularize backbone training (keeping weights close to original pretrained weights unless necessary to change them)
 
+LoRA: Low rank Adaptation is a way to disintegrate the matrix such that the trainable parameters are much fewer than the original matrix. It is a very efficient way to train large models with limited resources and it is widely used in LLMs. But it can also be used for smaller models like ResNet18 to regularize training and reduce overfitting.
+See Jupyter notebook [LoRA.ipynb](LoRA.ipynb) for a simple example of how to use LoRA. Original matrix 'W' (m x n with rank 'r') can be broken down into 2 matrices 'A' (m x r) and 'B' (r x n). Any random matrix y = x@W + b is shown to be similar to y' = CR@x + b 
+
+
 - The low learning rate approach didn't work well - the initial convergence slowed down while it still overfitted in the long run.
 
 - I briefly tried partial unfreezing and combining it with low learning rate: training the last couple layers with high lr and the rest with very low lr. It worked better but didn't completely solve the overfitting. While it might be possible to make this work, I eventually moved to the third approach which actually solved the problem.

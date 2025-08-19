@@ -64,49 +64,94 @@ Handles config
 2. dot2/lerobot/lerobot/scripts/train.py (Training Script)
  Actual training execution script that implements the training loop:
 
+### Dataset loading: 
+Parquet for the data files are loaded. This includes the action and obs information. After this video files are also chopped as per the timestamps and further loaded as well.
+
+These parquet files contain:
+- Actions: Robot control commands
+- Observations: Robot state, sensor readings
+- Rewards: Task completion signals
+- Timestamps: Precise timing information
+- Task indices: Which task is being performed
+- Episode indices: Which episode each frame belongs to
+
+The video files are loaded on-demand when you access specific data points, and they're precisely chopped according to timestamps:
+
+Stepwise: 
+- Calculate current timestamps
+- Calculate query timestamps for vide frames based on current_ts, query_indices
+- Decode specific frames at that timestamp and sync ensuring that it valid.
+- used a standard torch.util.dataloader class
+- all modalities are accessed using the __getitem__ class [image, action, obs]
+
+
+Information fed into subsequent streams: 
+{
+    # From parquet files
+    "action": torch.tensor(...),
+    "observation": torch.tensor(...),
+    "reward": torch.tensor(...),
+    "timestamp": torch.tensor(...),
+    "episode_index": torch.tensor(...),
+    "task_index": torch.tensor(...),
+    
+    # From video files (if applicable)
+    "observation.images.camera1": torch.tensor(...),  # Video frames
+    "observation.images.camera2": torch.tensor(...),
+    
+    # Additional metadata
+    "task": "pick up the red block",
+    "dataset_index": torch.tensor(0),  # If using MultiLeRobotDataset
+    
+    # Temporal offsets (if using delta_timestamps)
+    "action_t+1": torch.tensor(...),
+    "action_t+2": torch.tensor(...),
+    "action_t+1_is_pad": torch.tensor(False),
+    "action_t+2_is_pad": torch.tensor(False)
+}
 
 Dataset used: lerobot/pusht
+
+Dataset sample which is output from the dataset.loaders can be visualized using command: 
+```
+from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
+dataset = LeRobotDataset(repo_id="lerobot/pusht")    
+print(dataset[0])
+```
+
+dataset.features
+{'observation.image': {'dtype': 'video', 'shape': (...), 'names': [...], 'video_info': {...}}, 'observation.state': {'dtype': 'float32', 'shape': (...), 'names': {...}}, 'action': {'dtype': 'float32', 'shape': (...), 'names': {...}}, 'episode_index': {'dtype': 'int64', 'shape': (...), 'names': None}, 'frame_index': {'dtype': 'int64', 'shape': (...), 'names': None}, 'timestamp': {'dtype': 'float32', 'shape': (...), 'names': None}, 'next.reward': {'dtype': 'float32', 'shape': (...), 'names': None}, 'next.done': {'dtype': 'bool', 'shape': (...), 'names': None}, 'next.success': {'dtype': 'bool', 'shape': (...), 'names': None}, 'index': {'dtype': 'int64', 'shape': (...), 'names': None}, 'task_index': {'dtype': 'int64', 'shape': (...), 'names': None}}
+
+### here is the normalization profile: 
+    normalization_mapping: dict[str, NormalizationMode] = field(
+        default_factory=lambda: {
+            "VISUAL": NormalizationMode.MEAN_STD,
+            "STATE": NormalizationMode.MIN_MAX,
+            "ENV": NormalizationMode.MIN_MAX,
+            "ACTION": NormalizationMode.MIN_MAX,
+        }
+    )
+the outlier compresses the min-max normalized values toward the lower end, while standardization spreads them based on their distance from the mean.
+Change image to MIN_MAX as it keeps the [0, 255] values to [0, 1]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #### Ilia Readme.md
 
-## Installation
-
-Download our source code:
-```bash
-git clone https://github.com/huggingface/lerobot.git
-cd lerobot
-```
-
-Create a virtual environment with Python 3.10 and activate it, e.g. with [`miniconda`](https://docs.anaconda.com/free/miniconda/index.html):
-```bash
-conda create -y -n lerobot python=3.10
-conda activate lerobot
-```
-
-Install 🤗 LeRobot:
-```bash
-pip install -e .
-```
-
-> **NOTE:** Depending on your platform, If you encounter any build errors during this step
-you may need to install `cmake` and `build-essential` for building some of our dependencies.
-On linux: `sudo apt-get install cmake build-essential`
-
-For simulations, 🤗 LeRobot comes with gymnasium environments that can be installed as extras:
-- [aloha](https://github.com/huggingface/gym-aloha)
-- [xarm](https://github.com/huggingface/gym-xarm)
-- [pusht](https://github.com/huggingface/gym-pusht)
-
-For instance, to install 🤗 LeRobot with aloha and pusht, use:
-```bash
-pip install -e ".[aloha, pusht]"
-```
-
-To use [Weights and Biases](https://docs.wandb.ai/quickstart) for experiment tracking, log in with
-```bash
-wandb login
-```
-
-(note: you will also need to enable WandB in the configuration. See below.)
 
 ## Walkthrough
 
@@ -131,34 +176,6 @@ wandb login
 ├── outputs               # contains results of scripts execution: logs, videos, model checkpoints
 └── tests                 # contains pytest utilities for continuous integration
 ```
-
-### Visualize datasets
-
-Check out [example 1](./examples/1_load_lerobot_dataset.py) that illustrates how to use our dataset class which automatically downloads data from the Hugging Face hub.
-
-You can also locally visualize episodes from a dataset on the hub by executing our script from the command line:
-```bash
-python lerobot/scripts/visualize_dataset.py \
-    --repo-id lerobot/pusht \
-    --episode-index 0
-```
-
-or from a dataset in a local folder with the `root` option and the `--local-files-only` (in the following case the dataset will be searched for in `./my_local_data_dir/lerobot/pusht`)
-```bash
-python lerobot/scripts/visualize_dataset.py \
-    --repo-id lerobot/pusht \
-    --root ./my_local_data_dir \
-    --local-files-only 1 \
-    --episode-index 0
-```
-
-
-It will open `rerun.io` and display the camera streams, robot states and actions, like this:
-
-https://github-production-user-asset-6210df.s3.amazonaws.com/4681518/328035972-fd46b787-b532-47e2-bb6f-fd536a55a7ed.mov?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20240505%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240505T172924Z&X-Amz-Expires=300&X-Amz-Signature=d680b26c532eeaf80740f08af3320d22ad0b8a4e4da1bcc4f33142c15b509eda&X-Amz-SignedHeaders=host&actor_id=24889239&key_id=0&repo_id=748713144
-
-
-Our script can also visualize datasets stored on a distant server. See `python lerobot/scripts/visualize_dataset.py --help` for more instructions.
 
 ### The `LeRobotDataset` format
 
@@ -228,145 +245,9 @@ python lerobot/scripts/eval.py --policy.path={OUTPUT_DIR}/checkpoints/last/pretr
 
 See `python lerobot/scripts/eval.py --help` for more instructions.
 
-### Train your own policy
-
-Check out [example 3](./examples/3_train_policy.py) that illustrate how to train a model using our core library in python, and [example 4](./examples/4_train_policy_with_script.md) that shows how to use our training script from command line.
-
-To use wandb for logging training and evaluation curves, make sure you've run `wandb login` as a one-time setup step. Then, when running the training command above, enable WandB in the configuration by adding `--wandb.enable=true`.
-
-A link to the wandb logs for the run will also show up in yellow in your terminal. Here is an example of what they look like in your browser. Please also check [here](./examples/4_train_policy_with_script.md#typical-logs-and-metrics) for the explanation of some commonly used metrics in logs.
-
-![](media/wandb.png)
-
-Note: For efficiency, during training every checkpoint is evaluated on a low number of episodes. You may use `--eval.n_episodes=500` to evaluate on more episodes than the default. Or, after training, you may want to re-evaluate your best checkpoints on more episodes or change the evaluation settings. See `python lerobot/scripts/eval.py --help` for more instructions.
-
-#### Reproduce state-of-the-art (SOTA)
-
-We provide some pretrained policies on our [hub page](https://huggingface.co/lerobot) that can achieve state-of-the-art performances.
-You can reproduce their training by loading the config from their run. Simply running:
-```bash
-python lerobot/scripts/train.py --config_path=lerobot/diffusion_pusht
-```
-reproduces SOTA results for Diffusion Policy on the PushT task.
-
-## Contribute
-
-If you would like to contribute to 🤗 LeRobot, please check out our [contribution guide](https://github.com/huggingface/lerobot/blob/main/CONTRIBUTING.md).
-
-<!-- ### Add a new dataset
-
-To add a dataset to the hub, you need to login using a write-access token, which can be generated from the [Hugging Face settings](https://huggingface.co/settings/tokens):
-```bash
-huggingface-cli login --token ${HUGGINGFACE_TOKEN} --add-to-git-credential
-```
-
-Then point to your raw dataset folder (e.g. `data/aloha_static_pingpong_test_raw`), and push your dataset to the hub with:
-```bash
-python lerobot/scripts/push_dataset_to_hub.py \
---raw-dir data/aloha_static_pingpong_test_raw \
---out-dir data \
---repo-id lerobot/aloha_static_pingpong_test \
---raw-format aloha_hdf5
-```
-
-See `python lerobot/scripts/push_dataset_to_hub.py --help` for more instructions.
-
-If your dataset format is not supported, implement your own in `lerobot/common/datasets/push_dataset_to_hub/${raw_format}_format.py` by copying examples like [pusht_zarr](https://github.com/huggingface/lerobot/blob/main/lerobot/common/datasets/push_dataset_to_hub/pusht_zarr_format.py), [umi_zarr](https://github.com/huggingface/lerobot/blob/main/lerobot/common/datasets/push_dataset_to_hub/umi_zarr_format.py), [aloha_hdf5](https://github.com/huggingface/lerobot/blob/main/lerobot/common/datasets/push_dataset_to_hub/aloha_hdf5_format.py), or [xarm_pkl](https://github.com/huggingface/lerobot/blob/main/lerobot/common/datasets/push_dataset_to_hub/xarm_pkl_format.py). -->
 
 
-### Add a pretrained policy
 
-Once you have trained a policy you may upload it to the Hugging Face hub using a hub id that looks like `${hf_user}/${repo_name}` (e.g. [lerobot/diffusion_pusht](https://huggingface.co/lerobot/diffusion_pusht)).
-
-You first need to find the checkpoint folder located inside your experiment directory (e.g. `outputs/train/2024-05-05/20-21-12_aloha_act_default/checkpoints/002500`). Within that there is a `pretrained_model` directory which should contain:
-- `config.json`: A serialized version of the policy configuration (following the policy's dataclass config).
-- `model.safetensors`: A set of `torch.nn.Module` parameters, saved in [Hugging Face Safetensors](https://huggingface.co/docs/safetensors/index) format.
-- `train_config.json`: A consolidated configuration containing all parameter userd for training. The policy configuration should match `config.json` exactly. Thisis useful for anyone who wants to evaluate your policy or for reproducibility.
-
-To upload these to the hub, run the following:
-```bash
-huggingface-cli upload ${hf_user}/${repo_name} path/to/pretrained_model
-```
-
-See [eval.py](https://github.com/huggingface/lerobot/blob/main/lerobot/scripts/eval.py) for an example of how other people may use your policy.
-
-
-### Improve your code with profiling
-
-An example of a code snippet to profile the evaluation of a policy:
-```python
-from torch.profiler import profile, record_function, ProfilerActivity
-
-def trace_handler(prof):
-    prof.export_chrome_trace(f"tmp/trace_schedule_{prof.step_num}.json")
-
-with profile(
-    activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
-    schedule=torch.profiler.schedule(
-        wait=2,
-        warmup=2,
-        active=3,
-    ),
-    on_trace_ready=trace_handler
-) as prof:
-    with record_function("eval_policy"):
-        for i in range(num_episodes):
-            prof.step()
-            # insert code to profile, potentially whole body of eval_policy function
-```
-
-## Citation
-
-If you want, you can cite this work with:
-```bibtex
-@misc{cadene2024lerobot,
-    author = {Cadene, Remi and Alibert, Simon and Soare, Alexander and Gallouedec, Quentin and Zouitine, Adil and Wolf, Thomas},
-    title = {LeRobot: State-of-the-art Machine Learning for Real-World Robotics in Pytorch},
-    howpublished = "\url{https://github.com/huggingface/lerobot}",
-    year = {2024}
-}
-```
-
-Additionally, if you are using any of the particular policy architecture, pretrained models, or datasets, it is recommended to cite the original authors of the work as they appear below:
-
-- [Diffusion Policy](https://diffusion-policy.cs.columbia.edu)
-```bibtex
-@article{chi2024diffusionpolicy,
-	author = {Cheng Chi and Zhenjia Xu and Siyuan Feng and Eric Cousineau and Yilun Du and Benjamin Burchfiel and Russ Tedrake and Shuran Song},
-	title ={Diffusion Policy: Visuomotor Policy Learning via Action Diffusion},
-	journal = {The International Journal of Robotics Research},
-	year = {2024},
-}
-```
-- [ACT or ALOHA](https://tonyzhaozh.github.io/aloha)
-```bibtex
-@article{zhao2023learning,
-  title={Learning fine-grained bimanual manipulation with low-cost hardware},
-  author={Zhao, Tony Z and Kumar, Vikash and Levine, Sergey and Finn, Chelsea},
-  journal={arXiv preprint arXiv:2304.13705},
-  year={2023}
-}
-```
-
-- [TDMPC](https://www.nicklashansen.com/td-mpc/)
-
-```bibtex
-@inproceedings{Hansen2022tdmpc,
-	title={Temporal Difference Learning for Model Predictive Control},
-	author={Nicklas Hansen and Xiaolong Wang and Hao Su},
-	booktitle={ICML},
-	year={2022}
-}
-```
-
-- [VQ-BeT](https://sjlee.cc/vq-bet/)
-```bibtex
-@article{lee2024behavior,
-  title={Behavior generation with latent actions},
-  author={Lee, Seungjae and Wang, Yibin and Etukuru, Haritheja and Kim, H Jin and Shafiullah, Nur Muhammad Mahi and Pinto, Lerrel},
-  journal={arXiv preprint arXiv:2403.03181},
-  year={2024}
-}
 ```
 False Positives: 
 

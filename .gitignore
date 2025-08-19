@@ -134,3 +134,4 @@ tmp/
 
 # Git
 .git/
+diffusion_policy/
