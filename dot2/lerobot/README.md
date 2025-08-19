@@ -135,12 +135,84 @@ the outlier compresses the min-max normalized values toward the lower end, while
 Change image to MIN_MAX as it keeps the [0, 255] values to [0, 1]
 
 
+Below is a summary of the architecture for a ResNet-based model with an 8-layer transformer decoder and LoRA adaptation, tailored to handle an input image of size [96x96x3], along with two additional lists of dimensions [2x1] each, and using a hidden embedding dimension of 512. 
 
+### Summary of the Architecture
 
+#### 1. **Input Components**
+The model receives three types of inputs:
+- **Image**: A tensor of shape `[batch_size, 3, 96, 96]` (RGB image, 96x96 pixels).
+- **List 1**: A tensor of shape `[batch_size, 2, 1]`, representing two scalar values per sample (e.g., metadata like coordinates, scale factors, or labels).
+- **List 2**: Another tensor of shape `[batch_size, 2, 1]`, providing additional metadata or context.
+- **Output Goal**: Generate a sequence autoregressively, conditioned on the image and lists.
 
+#### 2. **ResNet Feature Extraction**
+- **Role**: ResNet (e.g., ResNet-18 or ResNet-50, pre-trained on ImageNet) processes the input image to extract spatial features.
+- **Input Processing**: The image `[batch_size, 3, 96, 96]` is preprocessed (resized if needed, normalized with ImageNet mean/std) to match ResNet’s expected input (typically 224x224, but 96x96 can work with adjustments).
+- **Feature Map**: The last convolutional layer of ResNet outputs a feature map. For a 96x96 input, the spatial dimensions are reduced due to strides/pooling (e.g., `[batch_size, 512, 3, 3]` for ResNet-18, assuming a downsampling factor of ~32). This is flattened to `[batch_size, 9, 512]` (since 3x3=9).
+- **Projection to Hidden Dimension**: A linear layer projects the ResNet features (512 channels) to the transformer’s hidden dimension of 512 (i.e., `[batch_size, 9, 512]` remains `[batch_size, 9, 512]` but aligns with the decoder’s embedding space). Optional positional encodings can be added to preserve spatial information.
 
+#### 3. **Incorporating Additional Lists (List 1 and List 2)**
+- **List Processing**: Each list (`[batch_size, 2, 1]`) contains two scalar values per sample. These are reshaped to `[batch_size, 2]` and processed as follows:
+  - **Embedding**: Each scalar is passed through a learned embedding layer (e.g., a linear layer mapping scalars to 512-dimensional vectors) to produce `[batch_size, 2, 512]` per list.
+  - **Concatenation with Image Features**: The embedded List 1 and List 2 (each `[batch_size, 2, 512]`) are concatenated with the ResNet features `[batch_size, 9, 512]`, yielding a combined feature sequence of shape `[batch_size, 13, 512]` (9 from ResNet + 2 from List 1 + 2 from List 2).
+  - **Alternative Approach**: If the lists represent metadata (e.g., scale or labels), they could be embedded separately and added to the decoder’s input sequence (e.g., as special tokens) rather than concatenated with ResNet features. For simplicity, assume concatenation with ResNet features for cross-attention.
 
+#### 4. **8-Layer Transformer Decoder**
+- **Structure**: The decoder consists of 8 stacked transformer decoder layers, each processing the input sequence (e.g., text tokens for captioning) and attending to the combined features (ResNet + lists).
+- **Components per Layer**:
+  - **Masked Self-Attention**: Attends to previous tokens in the output sequence to ensure autoregressive generation. Input is the sequence’s hidden states `[batch_size, seq_len, 512]`.
+  - **Cross-Attention**: Attends to the combined features `[batch_size, 13, 512]` (ResNet + List 1 + List 2) as keys/values, with queries from the self-attention output. This integrates image and metadata information.
+  - **Feed-Forward Network**: A two-layer MLP (e.g., 512 to 2048 to 512) applies non-linear transformations to each token’s representation.
+  - **Layer Normalization and Residual Connections**: Applied after each sub-layer to stabilize training and preserve information flow.
+- **Information Flow**:
+  - The first layer takes the embedded input sequence (e.g., tokenized text with positional encodings, `[batch_size, seq_len, 512]`).
+  - Each layer outputs hidden states of the same shape, passing them to the next layer.
+  - All 8 layers share the same combined features `[batch_size, 13, 512]` for cross-attention, allowing consistent access to image and list information.
+- **Output Head**: After the 8th layer, a linear layer maps the final hidden states `[batch_size, seq_len, 512]` to the output space (e.g., vocabulary size for text generation).
 
+#### 5. **LoRA Adaptation**
+- **Purpose**: LoRA enables efficient fine-tuning by training low-rank adapters instead of the full model, critical for an 8-layer decoder with millions of parameters.
+- **Application**:
+  - In each of the 8 decoder layers, LoRA adapters are added to the query and value projections of masked self-attention and cross-attention (optionally keys).
+  - The projection layer for ResNet features (512 to 512) and list embeddings (scalar to 512) can also include LoRA adapters for task-specific adaptation.
+  - Typical LoRA config: rank (r) = 16, alpha = 32, dropout = 0.05. This adds ~0.1-1% trainable parameters (e.g., ~100K-1M parameters vs. ~100M total).
+- **Training**: Freeze all base weights (ResNet and decoder), train only LoRA adapters using cross-entropy loss (for text generation) on the dataset. This reduces memory and compute needs significantly.
+
+#### 6. **Training and Inference**
+- **Training**:
+  - **Dataset**: Image-caption pairs (or similar), where each sample includes an image `[96x96x3]`, List 1 `[2x1]`, List 2 `[2x1]`, and a target sequence (e.g., text).
+  - **Preprocessing**: Normalize images, embed lists, tokenize target sequences.
+  - **Loss**: Cross-entropy on predicted tokens, ignoring padding.
+  - **Optimization**: Use AdamW with learning rate ~5e-5, warm-up, and gradient checkpointing for memory efficiency with 8 layers.
+- **Inference**:
+  - Process the image and lists to get combined features `[batch_size, 13, 512]`.
+  - Start with a `<start>` token, pass through all 8 layers, predict the next token, and repeat autoregressively.
+  - Use beam search or sampling for better output quality.
+
+#### 7. **Architecture Diagram**
+- **Input**:
+  - Image → ResNet → `[batch_size, 9, 512]` (after flattening/projection).
+  - List 1, List 2 → Embedding → `[batch_size, 2, 512]` each.
+  - Combined features: `[batch_size, 13, 512]` (9 + 2 + 2).
+- **Decoder**:
+  - 8 layers, each with:
+    - Masked self-attention (input: sequence hidden states).
+    - Cross-attention (to combined features).
+    - Feed-forward network.
+    - Layer norm + residuals.
+  - Hidden dimension: 512 throughout.
+- **LoRA**: Adapters on attention projections in all 8 layers + projection layers.
+- **Output**: Sequence of tokens (e.g., captions) via final linear layer.
+
+#### 8. **Key Features**
+- **Unified Feature Context**: All 8 layers attend to the same `[batch_size, 13, 512]` features, ensuring consistent image/list integration.
+- **Deep Processing**: 8 layers enable hierarchical refinement of the output sequence.
+- **Efficiency**: LoRA minimizes trainable parameters, making fine-tuning practical.
+- **Flexibility**: Lists add metadata (e.g., object positions, labels), enhancing context for tasks like structured captioning.
+
+Architecture as per present understanding.
+![IMG_3193.jpg](IMG_3193.jpg)
 
 
 

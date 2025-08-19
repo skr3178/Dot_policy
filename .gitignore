@@ -135,3 +135,9 @@ tmp/
 # Git
 .git/
 diffusion_policy/
+
+# Excluded files
+resnet_adap_claude.py
+resnet_adap_lerobot2.py
+resnet_adap_grok_del.py
+test_single_frame.py
