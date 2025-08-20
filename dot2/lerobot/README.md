@@ -212,11 +212,154 @@ The model receives three types of inputs:
 - **Flexibility**: Lists add metadata (e.g., object positions, labels), enhancing context for tasks like structured captioning.
 
 Architecture as per present understanding.
+![Diagram_Arch.png](Diagram_Arch.png)
+
 ![IMG_3193.jpg](IMG_3193.jpg)
 
 
 
+## Key differences between D.o.T policy implemented by SKR and Ilia: 
+I'll analyze the training script in `resnet_adap_lerobot.py` and compare it with the DOT implementation in the `dot/` folder. Let me examine both implementations to identify the major differences.
 
+## **Architecture Approach**
+
+**ResNet Adapter (`resnet_adap_lerobot.py`):**
+- Uses a **ResNet + Transformer Decoder** architecture
+- Combines ResNet features with transformer layers for action prediction
+- Implements custom LoRA layers for efficient fine-tuning
+- Focuses on **single-step action prediction** from current observation
+
+**DOT Implementation (`dot/` folder):**
+- Uses a **pure Transformer Decoder** architecture
+- Implements **sequence-based decision making** with temporal horizons
+- Uses LoRA for vision backbone adaptation
+- Focuses on **multi-step action prediction** with lookback and prediction horizons
+
+### 2. **Configuration Structure**
+
+**ResNet Adapter:**
+```python
+@dataclass
+class ResNetTransformerConfig(PreTrainedConfig):
+    action_dim: int = 2
+    d_model: int = 512
+    num_layers: int = 8
+    num_heads: int = 8
+    d_ff: int = 2048
+    resnet_type: str = 'resnet18'
+    lora_rank: int = 16
+```
+
+**DOT Implementation:**
+```python
+@dataclass
+class DOTConfig(PreTrainedConfig):
+    n_obs_steps: int = 3
+    train_horizon: int = 20
+    inference_horizon: int = 20
+    lookback_obs_steps: int = 10
+    lookback_aug: int = 5
+    dim_model: int = 128
+    n_decoder_layers: int = 8
+```
+
+### 3. **Temporal Processing**
+
+**ResNet Adapter:**
+- **No temporal processing** - processes single current observation
+- Simple forward pass: `images + states → actions`
+- No sequence management or buffering
+
+**DOT Implementation:**
+- **Complex temporal processing** with observation buffers
+- Manages `lookback_obs_steps` (10) + `n_obs_steps` (3) observations
+- Implements action chunking and temporal smoothing
+- Uses `train_horizon` (20) and `inference_horizon` (20) for multi-step prediction
+
+### 4. **Training Approach**
+
+**ResNet Adapter:**
+```python
+def train_model(model, train_loader, val_loader, epochs=10, lr=1e-4, device=None):
+    # Simple MSE loss on single-step predictions
+    criterion = nn.MSELoss()
+    predicted_actions = model(images, states)
+    loss = criterion(predicted_actions, actions)
+```
+
+**DOT Implementation:**
+```python
+def forward(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
+    # Complex temporal loss with weighting
+    loss = nn.functional.l1_loss(batch["action"], actions_hat, reduction="none")
+    loss = (loss * rev_padding * self.loss_weights).mean()
+    # Uses exponential weighting for temporal prioritization
+```
+
+### 5. **Data Handling**
+
+**ResNet Adapter:**
+- Simple batch processing: `[images, states, actions]`
+- Basic normalization using LeRobot's built-in classes
+- No data augmentation or temporal buffering
+
+**DOT Implementation:**
+- Complex batch processing with temporal indices
+- Implements data augmentation (random cropping, state noise)
+- Maintains observation buffers for temporal consistency
+- Uses `action_is_pad` for handling variable-length sequences
+
+### 6. **Inference Strategy**
+
+**ResNet Adapter:**
+- **Single-step inference**: immediate action prediction
+- No action smoothing or temporal consistency
+
+**DOT Implementation:**
+- **Multi-step inference** with action chunking
+- Implements `predict_every_n` and `return_every_n` for efficiency
+- Uses exponential weighting for temporal smoothing
+- Maintains action prediction buffers
+
+### 7. **LoRA Implementation**
+
+**ResNet Adapter:**
+- Custom LoRA implementation for transformer layers
+- LoRA applied to attention and feed-forward components
+- Freezes base layers, only trains LoRA adapters
+
+**DOT Implementation:**
+- LoRA applied to vision backbone (ResNet)
+- Uses `LoRAConv2d` for convolutional layers
+- Simpler LoRA structure focused on vision adaptation
+
+### 8. **Key Architectural Differences**
+
+**ResNet Adapter:**
+- **Hybrid approach**: CNN + Transformer
+- **Single modality**: Current observation → action
+- **Simple loss**: MSE on immediate prediction
+
+**DOT Implementation:**
+- **Pure transformer**: End-to-end sequence modeling
+- **Temporal modality**: History + current → future actions
+- **Complex loss**: L1 with temporal weighting and padding
+
+### 9. **Use Case Differences**
+
+**ResNet Adapter:**
+- Better for **immediate control** tasks
+- Simpler training and inference
+- Lower computational overhead
+- Suitable for **real-time applications**
+
+**DOT Implementation:**
+- Better for **long-horizon planning** tasks
+- More sophisticated temporal reasoning
+- Higher computational overhead
+- Suitable for **strategic decision making**
+
+The ResNet adapter is essentially a **simplified, single-step version** of the DOT architecture, while DOT is a **full-fledged temporal decision transformer** designed for complex multi-step robotic tasks. The ResNet adapter trades temporal sophistication for simplicity and efficiency, making it more suitable for immediate control scenarios.
 
 
 

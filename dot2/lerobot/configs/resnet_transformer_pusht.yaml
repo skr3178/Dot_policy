@@ -1,0 +1,51 @@
+# Configuration for training ResNet + Transformer policy on PushT dataset
+dataset:
+  repo_id: "lerobot/pusht"
+
+env:
+  type: "pusht"
+
+policy:
+  type: "resnet_transformer"
+  action_dim: 2
+  d_model: 512
+  num_layers: 8
+  num_heads: 8
+  d_ff: 2048
+  resnet_type: "resnet18"
+  lora_rank: 16
+  lora_alpha: 32
+  dropout: 0.05
+  optimizer_lr: 1.0e-4
+  optimizer_min_lr: 1.0e-4
+  optimizer_lr_cycle_steps: 300000
+  optimizer_weight_decay: 1e-5
+
+# Training parameters
+device: "cpu"  # Change to "cuda" if GPU available
+use_amp: false
+seed: 1000
+num_workers: 4
+batch_size: 32
+eval_freq: 10000
+log_freq: 1000
+save_checkpoint: true
+save_freq: 50000
+
+# Offline training
+offline:
+  steps: 100000  # Start with fewer steps for testing
+
+# Online training (disabled for now)
+online:
+  steps: 0
+
+# Evaluation
+eval:
+  n_episodes: 10
+  batch_size: 4
+
+# Logging
+wandb:
+  enable: false
+

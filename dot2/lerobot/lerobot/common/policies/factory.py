@@ -60,6 +60,10 @@ def get_policy_class(name: str) -> PreTrainedPolicy:
         from lerobot.common.policies.dot.modeling_dot import DOTPolicy
 
         return DOTPolicy
+    elif name == "resnet_transformer":
+        from lerobot.common.policies.resnet_transformer.modeling_resnet_transformer import ResNetTransformerPolicy
+
+        return ResNetTransformerPolicy
     else:
         raise NotImplementedError(f"Policy with name {name} is not implemented.")
 
@@ -77,6 +81,9 @@ def make_policy_config(policy_type: str, **kwargs) -> PreTrainedConfig:
         return PI0Config(**kwargs)
     elif policy_type == "dot":
         return DOTConfig(**kwargs)
+    elif policy_type == "resnet_transformer":
+        from lerobot.common.policies.resnet_transformer.configuration_resnet_transformer import ResNetTransformerConfig
+        return ResNetTransformerConfig(**kwargs)
     else:
         raise ValueError(f"Policy type '{policy_type}' is not available.")
 
