@@ -193,12 +193,13 @@ def create_resnet_transformer_config():
     from lerobot.configs.train import TrainPipelineConfig, OfflineConfig, OnlineConfig
     from lerobot.common.optim.optimizers import AdamWConfig
     from lerobot.common.optim.schedulers import CosineAnnealingSchedulerConfig
+    from lerobot.configs.types import PolicyFeature, FeatureType
     
     # Create the configuration objects
     dataset_config = DatasetConfig(repo_id="lerobot/pusht")
     env_config = PushtEnv()
     
-    # Create ResNet transformer policy config
+    # Create ResNet transformer policy config with proper input/output features
     policy_config = ResNetTransformerConfig(
         action_dim=2,
         d_model=512,
@@ -212,7 +213,16 @@ def create_resnet_transformer_config():
         optimizer_lr=1.0e-4,
         optimizer_min_lr=1.0e-4,
         optimizer_lr_cycle_steps=300000,
-        optimizer_weight_decay=1e-5
+        optimizer_weight_decay=1e-5,
+        # Explicitly set input and output features for behavior cloning
+        input_features={
+            "observation.image": PolicyFeature(type=FeatureType.VISUAL, shape=(3, 96, 96)),
+            "observation.state": PolicyFeature(type=FeatureType.STATE, shape=(2,)),
+            "action": PolicyFeature(type=FeatureType.ACTION, shape=(2,)),  # Actions as input for training
+        },
+        output_features={
+            "action": PolicyFeature(type=FeatureType.ACTION, shape=(2,)),  # Actions as output
+        }
     )
     
     # Create offline training config
@@ -308,7 +318,17 @@ def train():
         device=device,
         ds_meta=offline_dataset.meta,
     )
-
+    
+    # Debug: Print the policy configuration to verify input_features
+    logging.info("Policy configuration:")
+    logging.info(f"Policy type: {policy.config.type}")
+    logging.info(f"Input features: {list(policy.config.input_features.keys())}")
+    logging.info(f"Output features: {list(policy.config.output_features.keys())}")
+    
+    # Validate the policy configuration
+    if hasattr(policy.config, 'validate_features'):
+        policy.config.validate_features()
+    
     logging.info("Creating optimizer and scheduler")
     optimizer, lr_scheduler = make_optimizer_and_scheduler(cfg, policy)
     grad_scaler = GradScaler(device, enabled=cfg.use_amp)

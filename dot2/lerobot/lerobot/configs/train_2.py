@@ -15,8 +15,7 @@ from lerobot.common import envs
 from lerobot.common.envs.configs import PushtEnv
 from lerobot.common.optim import OptimizerConfig
 from lerobot.common.optim.schedulers import LRSchedulerConfig
-# from lerobot.common.policies.dot.configuration_dot import DOTConfig
-from lerobot.common.policies.act.configuration_act import ACTConfig
+from lerobot.common.policies.dot.configuration_dot import DOTConfig
 from lerobot.common.utils.hub import HubMixin
 from lerobot.common.utils.utils import auto_select_torch_device, is_amp_available
 from lerobot.configs import parser
@@ -91,9 +90,8 @@ class OnlineConfig:
 @dataclass
 class TrainPipelineConfig(HubMixin):
     dataset: DatasetConfig = field(default_factory=lambda: DatasetConfig(repo_id="lerobot/pusht"))
-    # env: envs.EnvConfig | None = field(default_factory=lambda: PushtEnv())
-    env: envs.EnvConfig | None = None
-    policy: PreTrainedConfig | None = field(default_factory=lambda: ACTConfig())
+    env: envs.EnvConfig | None = field(default_factory=lambda: PushtEnv())
+    policy: PreTrainedConfig | None = field(default_factory=lambda: DOTConfig())
     # Set `dir` to where you would like to save all of the run outputs. If you run another training session
     # with the same value for `dir` its contents will be overwritten unless you set `resume` to true.
     output_dir: Path | None = None
@@ -112,7 +110,7 @@ class TrainPipelineConfig(HubMixin):
     seed: int | None = 1000
     # Number of workers for the dataloader.
     num_workers: int = 4
-    batch_size: int = 8
+    batch_size: int = 24
     eval_freq: int = 10_000
     log_freq: int = 1_000
     save_checkpoint: bool = True
